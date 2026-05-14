@@ -1,4 +1,4 @@
-# pi_logger! 
+# pi_logger!
 
 This folder contains code dedicated to handling communication between the SeaGlider and the Raspberry Pi. 
 
