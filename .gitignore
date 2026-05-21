@@ -1,0 +1,40 @@
+# Python virtual environment
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Pytest cache
+.pytest_cache/
+
+# VS Code workspace settings
+.vscode/
+
+# macOS files
+.DS_Store
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# Compiled C extensions
+*.so
+
+# Temporary files
+*.tmp
+*.temp
+*~
