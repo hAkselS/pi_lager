@@ -1,6 +1,9 @@
 # Python virtual environment
 venv/
 
+# Virtual environment creator
+setup_venv.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
