@@ -1,3 +1,3 @@
 # Pi Lager Config
-WISPR3_DATA_DIR = "/media/pi/WISPR3_DATA"
-SSD_DIR = "/media/pi/SSD"
+WISPR3_DATA_DIR: /media/camera/WISPR
+SSD_DIR: /home/camera

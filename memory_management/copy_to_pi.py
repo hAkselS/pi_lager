@@ -20,8 +20,8 @@ from pathlib import Path
 def get_default_paths_from_config(config_path="config.yaml"):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
-    path_to_wispr3_data = config.get('WISPR3_DATA_DIR')
-    path_to_ssd = config.get('SSD_DIR')
+        path_to_wispr3_data = config.get('WISPR3_DATA_DIR')
+        path_to_ssd = config.get('SSD_DIR')
     return path_to_wispr3_data, path_to_ssd
 
 def soft_search_WISPR(where_to_look):
@@ -128,8 +128,15 @@ def copy_to_pi():
     print(f"Adjusted path to WISPR3 data: {path_to_wispr3_data}")
     print(f"Adjusted path to SSD: {path_to_ssd}")
 
-    # Construct the rsync command                       # Store everything inside "WISPR_data" on the SSD. 
-    rsync_command = f"rsync -ah --update {path_to_wispr3_data} {path_to_ssd}/WISPR_data/" # Careful with the trailing slashes here.
+    # Construct the rsync command as a list of arguments
+    # Store everything inside "WISPR_data" on the SSD. 
+    rsync_command = [
+        "rsync", 
+        "-ahv", 
+        "--update", 
+        path_to_wispr3_data, 
+        f"{path_to_ssd}/WISPR_data/"
+    ]
 
     # Execute the rsync command. 
     try:
