@@ -8,4 +8,4 @@
 ~~~~~~~~~~`""'
 ```
 
-A reposity dedicated to handling communication between a Raspberry Pi (3) and a SeaGlider.
+A reposity dedicated to handling communication between a Raspberry Pi (5) and a SeaGlider.
