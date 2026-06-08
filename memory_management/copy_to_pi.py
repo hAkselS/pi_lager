@@ -3,12 +3,14 @@ File:   copy_to_pi.py
 
 Spec:   This script is used to copy WISPR data (stored as .dat files) 
         from the WISPR3 to an SSD storage device interfaced to the Raspberry Pi.
-        This script finds both storage devices and copies the data. In general, this 
-        script is mostly a wrapper for the 'rsync' command, which is 
+        This script assumes that the Pi is connected to an M.2 memory hat
+        and therefore has large amounts of local (not in /media) memory.
+        This script finds both storage devices using a soft search and copies the data. 
+        This script is mostly a wrapper for the 'rsync' command, which is 
         used to do the actual copying. 
 
-I/O:    This program accepts the data source and desitnation directories as function inputs.
-        However, default values are provided for both. 
+I/O:    This script reads from pi_lager/config.yaml file to find 
+        the memory locations of the WISPR and SSD. 
 
 Usage:  <copy_to_pi.py>
 '''
