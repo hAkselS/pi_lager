@@ -3,14 +3,12 @@ File:   copy_to_pi.py
 
 Spec:   This script is used to copy WISPR data (stored as .dat files) 
         from the WISPR3 to an SSD storage device interfaced to the Raspberry Pi.
-        This script assumes that the Pi is connected to an M.2 memory hat
-        and therefore has large amounts of local (not in /media) memory.
-        This script finds both storage devices using a soft search and copies the data. 
-        This script is mostly a wrapper for the 'rsync' command, which is 
+        This script finds both storage devices and copies the data. In general, this 
+        script is mostly a wrapper for the 'rsync' command, which is 
         used to do the actual copying. 
 
-I/O:    This script reads from pi_lager/config.yaml file to find 
-        the memory locations of the WISPR and SSD. 
+I/O:    This program accepts the data source and desitnation directories as function inputs.
+        However, default values are provided for both. 
 
 Usage:  <copy_to_pi.py>
 '''
@@ -18,10 +16,12 @@ Usage:  <copy_to_pi.py>
 import subprocess 
 import yaml
 from pathlib import Path
+print("I am running") 
 
 def get_default_paths_from_config(config_path="config.yaml"):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
+        print(f'type = {type(config)}')
         path_to_wispr3_data = config.get('WISPR3_DATA_DIR')
         path_to_ssd = config.get('SSD_DIR')
     return path_to_wispr3_data, path_to_ssd
@@ -130,15 +130,15 @@ def copy_to_pi():
     print(f"Adjusted path to WISPR3 data: {path_to_wispr3_data}")
     print(f"Adjusted path to SSD: {path_to_ssd}")
 
-    # Construct the rsync command as a list of arguments
-    # Store everything inside "WISPR_data" on the SSD. 
+    # Construct the rsync command                       # Store everything inside "WISPR_data" on the SSD. 
+    # rsync_command = f"rsync -ahv --update {path_to_wispr3_data} {path_to_ssd}/WISPR_data/" # Careful with the trailing slashes here.
     rsync_command = [
-        "rsync", 
-        "-ahv", 
-        "--update", 
-        path_to_wispr3_data, 
-        f"{path_to_ssd}/WISPR_data/"
-    ]
+            "rsync",
+            "-ahv",
+            "--update",
+            path_to_wispr3_data,
+            f"{path_to_ssd}/WISPR_data/" 
+            ] 
 
     # Execute the rsync command. 
     try:
@@ -150,3 +150,7 @@ def copy_to_pi():
         print(f"\nError copying WISPR data: {e}")
         return False
 
+# Main function for testing    
+if __name__ == '__main__':
+    print("I am in main") 
+    copy_to_pi()
