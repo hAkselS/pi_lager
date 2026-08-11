@@ -16,9 +16,15 @@ Usage:  <copy_to_pi.py>
 import subprocess 
 import yaml
 from pathlib import Path
+
+#####################################################################
+# CONFIGURATION DEFAULTS
+config_path="config/config.yaml"
+#####################################################################
+
 print("I am running") 
 
-def get_default_paths_from_config(config_path="config.yaml"):
+def get_default_paths_from_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         print(f'type = {type(config)}')

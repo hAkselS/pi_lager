@@ -1,1 +1,4 @@
 pyserial
+
+# Python version requirement
+python>=3.11,<3.12

@@ -1,106 +1,210 @@
-import serial # pip install pyserial 
-import shlex
-import time
+'''
+File:   copy_to_pi.py
 
+Spec:   This script is used to copy WISPR data (stored as .dat files) 
+        from the WISPR3 to an SSD storage device interfaced to the Raspberry Pi.
+        This script finds both storage devices and copies the data. In general, this 
+        script is mostly a wrapper for the 'rsync' command, which is 
+        used to do the actual copying. 
+
+I/O:    This program accepts the data source and desitnation directories as function inputs.
+        However, default values are provided for both. 
+
+Usage:  <copy_to_pi.py>
+'''
+
+import subprocess
+import time
+import sys
+import os
+import signal
+import serial
+
+# ==============================================================================
 # --- Configuration ---
-SERIAL_PORT = '/dev/ttyUSB0'
+# ==============================================================================
+SERIAL_PORT = '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE = 9600
 TERMINATOR = '\r\n'
+DELIMITER = ',' # Used to separate 'start,15999999' 
 
-# --- Command Handler Functions ---
-# Each function receives 'arg' as a string or None
+# Script configuration
+MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
 
-def handle_status(arg):
-    return "STATUS: OK"
+# ==============================================================================
+# --- Global State Flags & Tracking Variables ---
+# ==============================================================================
+download_received_early = False
+download_called_prematurely = False
 
-def handle_copy_memory(arg):
-    # Logic for wispr memory copy goes here
-    return f"Copying memory to destination: {arg}" if arg else "Copying memory..."
+# Process management state
+main_process = None
+start_command_received = False
 
-def handle_report_memory(arg):
-    return "Memory Report: 85% Free"
 
-def handle_shutdown(arg):
-    # You might want to trigger os.system('sudo shutdown now') here
-    return "System is shutting down..."
+# ==============================================================================
+# --- Placeholder Functions ---
+# ==============================================================================
+def handle_params(param: str):
+    """
+    Called when the 'start' command is received.
+    :param param: The parameter string passed after the delimiter (e.g., '15999999')
+    """
+    print(f"[Handler] Handling parameters: {param}")
+    # TODO: Implement parameter logic here
 
-def handle_echo(arg):
-    return f"ECHO: {arg}"
 
-def handle_hello(arg):
-    return "Hello back! I am a Raspberry Pi."
+def prep_download():
+    """
+    Called when the 'download' command is received.
+    Can inspect the global flags: download_received_early & download_called_prematurely
+    """
+    global download_received_early, download_called_prematurely
+    print("[Handler] Executing prep_download()...")
+    print(f"  └─ Flag (download_received_early): {download_received_early}")
+    print(f"  └─ Flag (download_called_prematurely): {download_called_prematurely}")
+    # TODO: Implement download preparation logic here
 
-# --- Command Registry ---
-# Mapping the trigger string to a specific ID and function
-COMMAND_MAP = {
-    "requests_status":    {"id": "001", "func": handle_status},
-    "copy_wispr_memory":  {"id": "002", "func": handle_copy_memory},
-    "report_memory":      {"id": "003", "func": handle_report_memory},
-    "shutdown":           {"id": "004", "func": handle_shutdown},
-    "echo":               {"id": "005", "func": handle_echo},
-    "hello_world":        {"id": "006", "func": handle_hello},
-}
 
-def main():
+def shutdown_pi():
+    """
+    Called after prep_download() completes.
+    """
+    print("[Handler] Executing shutdown_pi()...")
+    # TODO: Implement system shutdown logic here (e.g., os.system("sudo shutdown -h now"))
+
+
+# ==============================================================================
+# --- Process Control Helpers ---
+# ==============================================================================
+def stop_main_process():
+    """
+    Politely attempts to shut down main.py using SIGTERM for 10 seconds.
+    If main.py does not terminate in time, forcefully kills it with SIGKILL.
+    """
+    global main_process
+    if main_process is None or main_process.poll() is not None:
+        return  # Process is not running
+
+    print("[Handler] Politely requesting main.py to stop (SIGTERM)...")
+    main_process.terminate()
+
     try:
-        # Initialize Serial
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
-        time.sleep(2) # Give the port time to settle
-       
-        # Initial Ready Pulse
-        print("System Ready. Sending Startup Signal...")
-        ser.write(f"I'm ready{TERMINATOR}".encode())
-        ser.write(f"I'm ready{TERMINATOR}".encode())
+        # Wait up to 10 seconds for graceful exit
+        main_process.wait(timeout=10)
+        print("[Handler] main.py stopped cleanly.")
+    except subprocess.TimeoutExpired:
+        print("[Handler] main.py timed out after 10s. Forcefully terminating (SIGKILL)...")
+        main_process.kill()
+        main_process.wait()  # Ensure process resources are cleaned up
+        print("[Handler] main.py forcefully terminated.")
 
-        while True:
-            if ser.in_waiting > 0:
-                # Read until the newline terminator
-                raw_data = ser.readline().decode('utf-8', errors='ignore').strip()
-               
-                if not raw_data:
+
+# ==============================================================================
+# --- Main Serial Listener Loop ---
+# ==============================================================================
+def run_serial_handler():
+    global start_command_received, main_process
+    global download_received_early, download_called_prematurely
+
+    print(f"[Handler] Starting serial listener on {SERIAL_PORT} @ {BAUD_RATE} baud...")
+
+    try:
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
+    except Exception as e:
+        print(f"[Error] Failed to open serial port {SERIAL_PORT}: {e}")
+        sys.exit(1)
+
+    buffer = ""
+
+    while True:
+        # Check if main.py exited on its own (for status awareness)
+        if main_process is not None and main_process.poll() is not None:
+            # Process finished naturally
+            # TODO: check to see if this is necessary
+            pass
+
+        # Read available bytes from serial
+        if ser.in_waiting > 0:
+            data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
+            buffer += data
+
+            # Check if complete message with terminator arrived
+            # TODO: ensure the line terminator is correct here
+            while TERMINATOR in buffer:
+                line, buffer = buffer.split(TERMINATOR, 1)
+                line = line.strip()
+
+                if not line:
                     continue
 
-                # Handle quoting requirement: remove outer quotes if they exist
-                # shlex.split handles cases like: "command:parameter with spaces"
-                try:
-                    processed_input = shlex.split(raw_data)[0]
-                except Exception:
-                    processed_input = raw_data.strip('"')
+                print(f"[Serial Received] -> {line}")
 
-                # Split command and parameter
-                if ":" in processed_input:
-                    cmd_key, arg = processed_input.split(":", 1)
-                else:
-                    cmd_key, arg = processed_input, None
+                # Split payload by configured delimiter
+                parts = line.split(DELIMITER, 1)
+                cmd = parts[0].strip().lower()
+                arg = parts[1].strip() if len(parts) > 1 else ""
 
-                # Dispatch Logic
-                if cmd_key in COMMAND_MAP:
-                    entry = COMMAND_MAP[cmd_key]
-                    cmd_id = entry["id"]
-                   
-                    # 1. Immediate ACK with ID
-                    ser.write(f"ACK_{cmd_id}{TERMINATOR}".encode())
-                   
-                    # 2. Execute Function
-                    response = entry["func"](arg)
-                   
-                    # 3. Send Function Response
-                    if response:
-                        ser.write(f"{response}{TERMINATOR}".encode())
-                else:
-                    # Optional: handle unknown commands
-                    ser.write(f"ACK_ERR: Unknown Command{TERMINATOR}".encode())
+                # --------------------------------------------------------------
+                # Command 1: START
+                # --------------------------------------------------------------
+                if cmd == 'start':
+                    start_command_received = True
+                    
+                    # 1. Process params
+                    handle_params(arg)
 
-            # Non-blocking pause (prevents 100% CPU usage)
-            time.sleep(0.01)
+                    # 2. Launch main.py in the background
+                    if main_process is None or main_process.poll() is not None:
+                        print(f"[Handler] Launching {MAIN_SCRIPT_PATH} background process...")
+                        main_process = subprocess.Popen([sys.executable, MAIN_SCRIPT_PATH])
+                    else:
+                        print("[Handler] Notice: main.py is already running.")
 
-    except serial.SerialException as e:
-        print(f"Serial Error: {e}")
-    except KeyboardInterrupt:
-        print("\nScript stopped by user.")
-    finally:
-        if 'ser' in locals() and ser.is_open:
-            ser.close()
+                # --------------------------------------------------------------
+                # Command 2: DOWNLOAD
+                # --------------------------------------------------------------
+                elif cmd == 'download':
+                    is_running = (main_process is not None and main_process.poll() is None)
 
-if __name__ == "__main__":
-    main()
+                    if is_running:
+                        # Case A: Download called while main.py is actively running
+                        download_received_early = True
+                        print("[Flag Set] download_received_early = True")
+                        stop_main_process()
+
+                    elif not start_command_received or main_process is None:
+                        # Case B: Start was never called or main was never launched
+                        download_called_prematurely = True
+                        print("[Flag Set] download_called_prematurely = True")
+
+                    # 1. Execute download preparation
+                    prep_download()
+
+                    # 2. Trigger final shutdown
+                    shutdown_pi()
+                    
+                    # Exit listener loop
+                    ser.close()
+                    return
+
+
+if __name__ == '__main__':
+    run_serial_handler()
+
+# TODO: remove Aksel Notes 
+# Program comes online. 
+
+# Program waits for directive 
+
+# Program writes to config.yaml in pi lager and FKW (both must been in the ~/ directory)
+
+# Program starts pi lager / main.py (with the ability to cancel)
+
+# Program waits for download command
+
+# Program starts download command 
+
+# When download finishes, serial command handlers asks RPi to shutdown
+
+# End 
