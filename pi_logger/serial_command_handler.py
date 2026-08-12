@@ -12,6 +12,10 @@ Spec:   This script listens for serial commands from the Seaglider and
 
 I/O:    This proggram listens on a serial port (default: /dev/ttyUSB0) for commands from the Seaglider.
         This program outputs the results of the most recent dive to the Seaglider through serial (or ymodem TBD).
+        Allowed commands are:
+            1. start,<param> - Launches main.py and analyzes directive stored in param. 
+                - param must be a number between 0 and 15,999,999 (TODO: needs testing)
+            2. download - Preps data for download and send packet to Seaglider. 
 
 Usage:  <python3 serial_command_handler.py>
 '''
@@ -194,20 +198,3 @@ def run_serial_handler():
 
 if __name__ == '__main__':
     run_serial_handler()
-
-# TODO: remove Aksel Notes 
-# Program comes online. 
-
-# Program waits for directive 
-
-# Program writes to config.yaml in pi lager and FKW (both must been in the ~/ directory)
-
-# Program starts pi lager / main.py (with the ability to cancel)
-
-# Program waits for download command
-
-# Program starts download command 
-
-# When download finishes, serial command handlers asks RPi to shutdown
-
-# End 
