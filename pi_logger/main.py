@@ -1,16 +1,16 @@
 '''
-File:   copy_to_pi.py
+File:   main.py
 
-Spec:   This script is used to copy WISPR data (stored as .dat files) 
-        from the WISPR3 to an SSD storage device interfaced to the Raspberry Pi.
-        This script finds both storage devices and copies the data. In general, this 
-        script is mostly a wrapper for the 'rsync' command, which is 
-        used to do the actual copying. 
+Spec:   This script is the primary orchestrator of the processes that make up pi logger.
+        Main.py will read the config.yaml and utilize the parameters to launch the appropriate processes.
+        Main.py then launches copy_memory_to_pi.py to move fresh data from the WISPR to the Pi.
+        Once copy_memory_to_pi.py is complete, main.py will launch the FKW_detector. When the detector is finished,
+        main.py will send a success message to serial_command_handler.py and exit. 
 
-I/O:    This program accepts the data source and desitnation directories as function inputs.
-        However, default values are provided for both. 
+I/O:    This script reads the config.yaml.
+        This scrip accepts an interupt signal from serial_command_handler.py. 
 
-Usage:  <copy_to_pi.py>
+Usage:  <python3pi_logger/main.py>
 '''
 
 

@@ -17,7 +17,7 @@ I/O:    This proggram listens on a serial port (default: /dev/ttyUSB0) for comma
                 - param must be a number between 0 and 15,999,999 (TODO: needs testing)
             2. download - Preps data for download and send packet to Seaglider. 
 
-Usage:  <python3 serial_command_handler.py>
+Usage:  <python3 pi_logger/serial_command_handler.py>
 '''
 
 import subprocess
@@ -128,7 +128,8 @@ def run_serial_handler():
         # Check if main.py exited on its own (for status awareness)
         if main_process is not None and main_process.poll() is not None:
             # Process finished naturally
-            # TODO: check to see if this is necessary
+            # TODO: alter flags for more aksel style design 
+            # TODO: when main finishes, run packetize results
             pass
 
         # Read available bytes from serial

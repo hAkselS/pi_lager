@@ -10,7 +10,7 @@ Spec:   This script is used to copy WISPR data (stored as .dat files)
 I/O:    This script reads from pi_lager/config.yaml file to find 
         the memory locations of the WISPR and SSD. 
 
-Usage:  <copy_to_pi.py>
+Usage:  <python3 memory_management/copy_to_pi.py>
 
 '''
 
