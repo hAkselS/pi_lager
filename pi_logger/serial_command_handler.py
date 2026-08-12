@@ -1,16 +1,19 @@
 '''
-File:   copy_to_pi.py
+File:   serial_command_handler.py
 
-Spec:   This script is used to copy WISPR data (stored as .dat files) 
-        from the WISPR3 to an SSD storage device interfaced to the Raspberry Pi.
-        This script finds both storage devices and copies the data. In general, this 
-        script is mostly a wrapper for the 'rsync' command, which is 
-        used to do the actual copying. 
+Spec:   This script listens for serial commands from the Seaglider and 
+        dispatches functions and scripts accordingly. There are two
+        primary commands: 'start' and 'download'. When start is received,
+        this script will launch main.py. This script also has a method to 
+        stop main.py if download is received while main.py is still running.
+        When download is received, this script will call prep_download() which
+        summarizes and packetizes the results from the most recent dive and 
+        sends them to the Seaglider through serial (or ymodem TBD).
 
-I/O:    This program accepts the data source and desitnation directories as function inputs.
-        However, default values are provided for both. 
+I/O:    This proggram listens on a serial port (default: /dev/ttyUSB0) for commands from the Seaglider.
+        This program outputs the results of the most recent dive to the Seaglider through serial (or ymodem TBD).
 
-Usage:  <copy_to_pi.py>
+Usage:  <python3 serial_command_handler.py>
 '''
 
 import subprocess

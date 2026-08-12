@@ -1,4 +1,8 @@
 # pi_lager!  
+
+A reposity dedicated to handling communication between a Raspberry Pi (5) and a SeaGlider.
+
+
 ```text
          . .
        .. . *.
@@ -7,5 +11,3 @@
     ______||||______
 ~~~~~~~~~~`""'
 ```
-
-A reposity dedicated to handling communication between a Raspberry Pi (5) and a SeaGlider.
