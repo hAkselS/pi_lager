@@ -31,6 +31,7 @@ import serial
 
 #####################################################################
 # CONFIGURATION DEFAULTS
+# TODO: MOVE THESE TO CONFIG.YAML
 SERIAL_PORT = '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE = 9600
 TERMINATOR = '\r\n'
@@ -130,16 +131,19 @@ def run_serial_handler():
 
     while True:
         # Check if main.py exited on its own (for status awareness)
-        if main_process is not None and main_process.poll() is not None:
-            # Process finished naturally
-            # TODO: alter flags for more aksel style design 
-            # TODO: when main finishes, run packetize results
-            pass
+        # TODO: reinstate this when ready
+        # if main_process is not None and main_process.poll() is not None:
+        #     # Process finished naturally
+        #     # TODO: alter flags for more aksel style design 
+        #     # TODO: when main finishes, run packetize results
+        #     pass
 
         # Read available bytes from serial
         if ser.in_waiting > 0:
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
             buffer += data
+
+            print(f"sch: received data = [{data}], buffer =[{buffer}]\n")
 
             # Check if complete message with terminator arrived
             # TODO: ensure the line terminator is correct here
@@ -150,7 +154,7 @@ def run_serial_handler():
                 if not line:
                     continue
 
-                print(f"[Serial Received] -> {line}")
+                print(f"sch: Received line = [{line}]")
 
                 # Split payload by configured delimiter
                 parts = line.split(DELIMITER, 1)
@@ -160,45 +164,45 @@ def run_serial_handler():
                 # --------------------------------------------------------------
                 # Command 1: START
                 # --------------------------------------------------------------
-                if cmd == 'start':
-                    start_command_received = True
+                # if cmd == 'start':
+                #     start_command_received = True
                     
-                    # 1. Process params
-                    handle_start_param(arg)
+                #     # 1. Process params
+                #     handle_start_param(arg)
 
-                    # 2. Launch main.py in the background
-                    if main_process is None or main_process.poll() is not None:
-                        print(f"sch: Launching {MAIN_SCRIPT_PATH} background process...")
-                        main_process = subprocess.Popen([sys.executable, MAIN_SCRIPT_PATH])
-                    else:
-                        print("sch: Notice: main.py is already running.")
+                #     # 2. Launch main.py in the background
+                #     if main_process is None or main_process.poll() is not None:
+                #         print(f"sch: Launching {MAIN_SCRIPT_PATH} background process...")
+                #         main_process = subprocess.Popen([sys.executable, MAIN_SCRIPT_PATH])
+                #     else:
+                #         print("sch: Notice: main.py is already running.")
 
                 # --------------------------------------------------------------
                 # Command 2: DOWNLOAD
                 # --------------------------------------------------------------
-                elif cmd == 'download':
-                    is_running = (main_process is not None and main_process.poll() is None)
+                # elif cmd == 'download':
+                #     is_running = (main_process is not None and main_process.poll() is None)
 
-                    if is_running:
-                        # Case A: Download called while main.py is actively running
-                        download_received_early = True
-                        print("[Flag Set] download_received_early = True")
-                        stop_main_process()
+                #     if is_running:
+                #         # Case A: Download called while main.py is actively running
+                #         download_received_early = True
+                #         print("[Flag Set] download_received_early = True")
+                #         stop_main_process()
 
-                    elif not start_command_received or main_process is None:
-                        # Case B: Start was never called or main was never launched
-                        download_called_prematurely = True
-                        print("[Flag Set] download_called_prematurely = True")
+                #     elif not start_command_received or main_process is None:
+                #         # Case B: Start was never called or main was never launched
+                #         download_called_prematurely = True
+                #         print("[Flag Set] download_called_prematurely = True")
 
-                    # 1. Execute download preparation
-                    prep_download()
+                #     # 1. Execute download preparation
+                #     prep_download()
 
-                    # 2. Trigger final shutdown
-                    shutdown_pi()
+                #     # 2. Trigger final shutdown
+                #     shutdown_pi()
                     
-                    # Exit listener loop
-                    ser.close()
-                    return
+                #     # Exit listener loop
+                #     ser.close()
+                #     return
 
 
 if __name__ == '__main__':
