@@ -1,4 +1,4 @@
+# Written for python3.11
 pyserial
+PyYAML
 
-# Python version requirement
-python>=3.11,<3.12
