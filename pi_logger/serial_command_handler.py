@@ -13,9 +13,11 @@ Spec:   This script listens for serial commands from the Seaglider and
 I/O:    This proggram listens on a serial port (default: /dev/ttyUSB0) for commands from the Seaglider.
         This program outputs the results of the most recent dive to the Seaglider through serial (or ymodem TBD).
         Allowed commands are:
-            1. start,<param> - Launches main.py and analyzes directive stored in param. 
+            1. start,datetime,<param> - Launches main.py and analyzes directive stored in param. 
                 - param must be a number between 0 and 15,999,999 (TODO: needs testing)
             2. download - Preps data for download and send packet to Seaglider. 
+
+ID: sch
 
 Usage:  <python3 pi_logger/serial_command_handler.py>
 '''
@@ -27,47 +29,48 @@ import os
 import signal
 import serial
 
-# ==============================================================================
-# --- Configuration ---
-# ==============================================================================
+#####################################################################
+# CONFIGURATION DEFAULTS
 SERIAL_PORT = '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE = 9600
 TERMINATOR = '\r\n'
 DELIMITER = ',' # Used to separate 'start,15999999' 
 
-# Script configuration
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
+#####################################################################
 
-# ==============================================================================
-# --- Global State Flags & Tracking Variables ---
-# ==============================================================================
+
+#####################################################################
+# GLOBAL STATE FLAGS & STATUS VARIABLES
 download_received_early = False
 download_called_prematurely = False
 
 # Process management state
 main_process = None
 start_command_received = False
+#####################################################################
 
 
 # ==============================================================================
-# --- Placeholder Functions ---
+# --- Worker functions ---
 # ==============================================================================
-def handle_params(param: str):
+def handle_start_param(param: str):
     """
     Called when the 'start' command is received.
     :param param: The parameter string passed after the delimiter (e.g., '15999999')
     """
-    print(f"[Handler] Handling parameters: {param}")
+    print(f"sch: Handling parameters: {param}")
     # TODO: Implement parameter logic here
 
 
 def prep_download():
     """
-    Called when the 'download' command is received.
-    Can inspect the global flags: download_received_early & download_called_prematurely
+    Called before or when the 'download' command is received.
+    Gathers all information to be transfered to the glider to radio transmission to shore
+    into once text file and finishes.
     """
     global download_received_early, download_called_prematurely
-    print("[Handler] Executing prep_download()...")
+    print("sch: Executing prep_download()...")
     print(f"  └─ Flag (download_received_early): {download_received_early}")
     print(f"  └─ Flag (download_called_prematurely): {download_called_prematurely}")
     # TODO: Implement download preparation logic here
@@ -77,34 +80,35 @@ def shutdown_pi():
     """
     Called after prep_download() completes.
     """
-    print("[Handler] Executing shutdown_pi()...")
+    print("sch: Executing shutdown_pi()...")
     # TODO: Implement system shutdown logic here (e.g., os.system("sudo shutdown -h now"))
 
 
 # ==============================================================================
 # --- Process Control Helpers ---
 # ==============================================================================
-def stop_main_process():
-    """
-    Politely attempts to shut down main.py using SIGTERM for 10 seconds.
-    If main.py does not terminate in time, forcefully kills it with SIGKILL.
-    """
-    global main_process
-    if main_process is None or main_process.poll() is not None:
-        return  # Process is not running
+# TODO: uncomment when ready
+# def stop_main_process():
+#     """
+#     Politely attempts to shut down main.py using SIGTERM for 10 seconds.
+#     If main.py does not terminate in time, forcefully kills it with SIGKILL.
+#     """
+#     global main_process
+#     if main_process is None or main_process.poll() is not None:
+#         return  # Process is not running
 
-    print("[Handler] Politely requesting main.py to stop (SIGTERM)...")
-    main_process.terminate()
+#     print("sch: Politely requesting main.py to stop (SIGTERM)...")
+#     main_process.terminate()
 
-    try:
-        # Wait up to 10 seconds for graceful exit
-        main_process.wait(timeout=10)
-        print("[Handler] main.py stopped cleanly.")
-    except subprocess.TimeoutExpired:
-        print("[Handler] main.py timed out after 10s. Forcefully terminating (SIGKILL)...")
-        main_process.kill()
-        main_process.wait()  # Ensure process resources are cleaned up
-        print("[Handler] main.py forcefully terminated.")
+#     try:
+#         # Wait up to 10 seconds for graceful exit
+#         main_process.wait(timeout=10)
+#         print("sch: main.py stopped cleanly.")
+#     except subprocess.TimeoutExpired:
+#         print("sch: main.py timed out after 10s. Forcefully terminating (SIGKILL)...")
+#         main_process.kill()
+#         main_process.wait()  # Ensure process resources are cleaned up
+#         print("sch: main.py forcefully terminated.")
 
 
 # ==============================================================================
@@ -114,7 +118,7 @@ def run_serial_handler():
     global start_command_received, main_process
     global download_received_early, download_called_prematurely
 
-    print(f"[Handler] Starting serial listener on {SERIAL_PORT} @ {BAUD_RATE} baud...")
+    print(f"sch: Starting serial listener on {SERIAL_PORT} @ {BAUD_RATE} baud...")
 
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
@@ -160,14 +164,14 @@ def run_serial_handler():
                     start_command_received = True
                     
                     # 1. Process params
-                    handle_params(arg)
+                    handle_start_param(arg)
 
                     # 2. Launch main.py in the background
                     if main_process is None or main_process.poll() is not None:
-                        print(f"[Handler] Launching {MAIN_SCRIPT_PATH} background process...")
+                        print(f"sch: Launching {MAIN_SCRIPT_PATH} background process...")
                         main_process = subprocess.Popen([sys.executable, MAIN_SCRIPT_PATH])
                     else:
-                        print("[Handler] Notice: main.py is already running.")
+                        print("sch: Notice: main.py is already running.")
 
                 # --------------------------------------------------------------
                 # Command 2: DOWNLOAD
