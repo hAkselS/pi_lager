@@ -32,7 +32,7 @@ import serial
 #####################################################################
 # CONFIGURATION DEFAULTS
 # TODO: MOVE THESE TO CONFIG.YAML
-SERIAL_PORT = '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
+SERIAL_PORT = '/dev/ttys001'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE = 9600
 TERMINATOR = '\r\n'
 DELIMITER = ',' # Used to separate 'start,15999999' 
