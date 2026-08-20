@@ -33,6 +33,7 @@ import sys
 import os
 import signal
 import serial
+from datetime import datetime, timezone
 
 #####################################################################
 # CONFIGURATION DEFAULTS
@@ -61,18 +62,33 @@ start_command_received = False
 # --- Handler Functions ---
 # ==============================================================================
 def set_pi_datetime(date_string):
-    print("sch: set_pi_datetime has been called")
+    # Parse ISO format (replace 'Z' with explicit UTC offset for older Python versions)
+    dt = datetime.fromisoformat(date_string.replace("Z", "+00:00"))
+
+    # Format as 'YYYY-MM-DD HH:MM:SS' in UTC
+    formatted_time = dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    # Use a subprocess to set the datetim
     # TODO: TEST ME ON THE RASPBERRY PI
+    # subprocess.run(["sudo", "date", "-u", "-s", formatted_time], check=True)
+    
+    new_time = datetime.now(timezone.utc)
+    print(f"\nsch: set_pi_datetime has been called with string -> [{date_string}]\n" \
+    f"     new datetime -> [{new_time}]")
+
 
 def set_mission_params(param_string):
-    print("sch: set_mission_params has been called")
+    print(f"sch: set_mission_params has been called with string -> [{param_string}]")
+    # Implement later
+    pass
 
 def set_dive_climb(dive_letter):
-    print("sch: set_dive_climb has been called")
+    print(f"sch: set_dive_climb has been called with letter -> [{dive_letter}]")
+    # TODO: save dive climb status to
 
-def start_mission():
-    print("sch: start_mission has been called")
-    
+def start_main_dot_py():
+    print(f"sch: start_mission has been called")
+
 
 # def prep_download():
 #     """
@@ -131,7 +147,7 @@ def run_serial_handler():
     global start_command_received, main_process
     global download_received_early, download_called_prematurely
 
-    print(f"sch: Starting serial listener on {SERIAL_PORT} @ {BAUD_RATE} baud...")
+    print(f"sch: Starting serial listener on {SERIAL_PORT} @ {BAUD_RATE} baud...\n")
 
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
@@ -159,11 +175,19 @@ def run_serial_handler():
             if 'start' in buffer:
                 parsed_start_cmd = buffer.strip().split(",")
                 print(f"sch: start case: parsed_start_cmd -> [{parsed_start_cmd}]")
+                pi_start, pi_dive, pi_params, pi_date = parsed_start_cmd
 
-                # TODO: handle start
                 # Set date time 
-                # Set param values (later)
+                set_pi_datetime(pi_date)
+
+                # Set param values (does nothing right now)
+                set_mission_params(pi_params)
+
                 # Store dive/climb status
+                set_dive_climb(pi_dive)
+
+                # Start main.py
+                start_main_dot_py()
 
                 # Reset the buffer
                 buffer = ''
