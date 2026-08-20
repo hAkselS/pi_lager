@@ -58,36 +58,35 @@ start_command_received = False
 
 
 # ==============================================================================
-# --- Worker functions ---
+# --- Handler Functions ---
 # ==============================================================================
-# def handle_start_param(param: str):
+def set_pi_datetime(date_string):
+    print("sch: set_pi_datetime has been called")
+    # TODO: TEST ME ON THE RASPBERRY PI
+
+def set_mission_params(param_string):
+    print("sch: set_mission_params has been called")
+
+def set_dive_climb(dive_letter):
+    print("sch: set_dive_climb has been called")
+
+def start_mission():
+    print("sch: start_mission has been called")
+    
+
+# def prep_download():
 #     """
-#     Called when the 'start' command is received.
-#     :param param: The parameter string passed after the delimiter (e.g., '15999999')
+#     Called before or when the 'download' command is received.
+#     Gathers all information to be transfered to the glider to radio transmission to shore
+#     into once text file and finishes.
 #     """
-#     print(f"sch: Handling parameters: {param}")
-#     # TODO: Implement parameter logic here
+#     global download_received_early, download_called_prematurely
+#     print("sch: Executing prep_download()...")
+#     print(f"  └─ Flag (download_received_early): {download_received_early}")
+#     print(f"  └─ Flag (download_called_prematurely): {download_called_prematurely}")
+#     # TODO: Implement download preparation logic here
 
 
-def prep_download():
-    """
-    Called before or when the 'download' command is received.
-    Gathers all information to be transfered to the glider to radio transmission to shore
-    into once text file and finishes.
-    """
-    global download_received_early, download_called_prematurely
-    print("sch: Executing prep_download()...")
-    print(f"  └─ Flag (download_received_early): {download_received_early}")
-    print(f"  └─ Flag (download_called_prematurely): {download_called_prematurely}")
-    # TODO: Implement download preparation logic here
-
-
-# def shutdown_pi():
-#     """
-#     Called after prep_download() completes.
-#     """
-#     print("sch: Executing shutdown_pi()...")
-#     # TODO: Implement system shutdown logic here (e.g., os.system("sudo shutdown -h now"))
 
 
 # ==============================================================================
@@ -115,6 +114,14 @@ def prep_download():
 #         main_process.kill()
 #         main_process.wait()  # Ensure process resources are cleaned up
 #         print("sch: main.py forcefully terminated.")
+
+# def shutdown_pi():
+#     """
+#     Called after prep_download() completes.
+#     """
+#     print("sch: Executing shutdown_pi()...")
+#     # TODO: Implement system shutdown logic here (e.g., os.system("sudo shutdown -h now"))
+
 
 
 # ==============================================================================
@@ -146,21 +153,25 @@ def run_serial_handler():
         # Read available bytes from serial
         if ser.in_waiting > 0:
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
-            buffer += data # Buffer is necessary so if more data is received nothing is whiped out
-
-            print(f"sch: received data = [{data}], \n buffer =[{buffer}]\n")
+            buffer += data # Buffer is necessary so nothing is lost if a second packet comes in
 
             # Handle START ('start') scenario
             if 'start' in buffer:
-                print(f"sch: start case: buffer is {buffer}")
+                parsed_start_cmd = buffer.strip().split(",")
+                print(f"sch: start case: parsed_start_cmd -> [{parsed_start_cmd}]")
 
                 # TODO: handle start
+                # Set date time 
+                # Set param values (later)
+                # Store dive/climb status
 
                 # Reset the buffer
                 buffer = ''
 
+            # Handle DOWNLOAD ('download') scenario
             elif 'download' in buffer:
-                print(f"sch: download case: buffer is {buffer}")
+                parsed_download_cmd = buffer.strip()
+                print(f"sch: download case: parsed_download_cmd -> [{parsed_download_cmd}]")
 
                 #TODO: handle download 
 
@@ -169,57 +180,6 @@ def run_serial_handler():
 
             else:
                 continue
-            
-
-                print(f"sch: Received line = [{line}]")
-
-            #     # Split payload by configured delimiter
-            #     parts = line.split(DELIMITER, 1)
-            #     cmd = parts[0].strip().lower()
-            #     arg = parts[1].strip() if len(parts) > 1 else ""
-
-                # --------------------------------------------------------------
-                # Command 1: START
-                # --------------------------------------------------------------
-                # if cmd == 'start':
-                #     start_command_received = True
-                    
-                #     # 1. Process params
-                #     handle_start_param(arg)
-
-                #     # 2. Launch main.py in the background
-                #     if main_process is None or main_process.poll() is not None:
-                #         print(f"sch: Launching {MAIN_SCRIPT_PATH} background process...")
-                #         main_process = subprocess.Popen([sys.executable, MAIN_SCRIPT_PATH])
-                #     else:
-                #         print("sch: Notice: main.py is already running.")
-
-                # --------------------------------------------------------------
-                # Command 2: DOWNLOAD
-                # --------------------------------------------------------------
-                # elif cmd == 'download':
-                #     is_running = (main_process is not None and main_process.poll() is None)
-
-                #     if is_running:
-                #         # Case A: Download called while main.py is actively running
-                #         download_received_early = True
-                #         print("[Flag Set] download_received_early = True")
-                #         stop_main_process()
-
-                #     elif not start_command_received or main_process is None:
-                #         # Case B: Start was never called or main was never launched
-                #         download_called_prematurely = True
-                #         print("[Flag Set] download_called_prematurely = True")
-
-                #     # 1. Execute download preparation
-                #     prep_download()
-
-                #     # 2. Trigger final shutdown
-                #     shutdown_pi()
-                    
-                #     # Exit listener loop
-                #     ser.close()
-                #     return
 
 
 if __name__ == '__main__':
