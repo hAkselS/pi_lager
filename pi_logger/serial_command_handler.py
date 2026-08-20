@@ -10,12 +10,17 @@ Spec:   This script listens for serial commands from the Seaglider and
         summarizes and packetizes the results from the most recent dive and 
         sends them to the Seaglider through serial (or ymodem TBD).
 
-I/O:    This proggram listens on a serial port (default: /dev/ttyUSB0) for commands from the Seaglider.
+I/O:    This program listens on a serial port (default: /dev/ttyXXX) for commands from the Seaglider.
         This program outputs the results of the most recent dive to the Seaglider through serial (or ymodem TBD).
         Allowed commands are:
-            1. start,datetime,<param> - Launches main.py and analyzes directive stored in param. 
-                - param must be a number between 0 and 15,999,999 (TODO: needs testing)
-            2. download - Preps data for download and send packet to Seaglider. 
+            1. start 
+                - Receives: 'start,a,12345678,2026-08-19T20:59:20Z'
+                            '\r'
+                - (Yes, a new line then a \return)
+                - Launches main.py and analyzes directive stored in param. 
+                - Params must be a number between 0 and 15,999,999 (TODO: needs testing)
+            2. download 
+                - Prepares data for download and sends a packet to Seaglider. 
 
 ID: sch
 
@@ -34,8 +39,8 @@ import serial
 # TODO: MOVE THESE TO CONFIG.YAML
 SERIAL_PORT = '/dev/ttys001'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE = 9600
-TERMINATOR = '\r\n'
-DELIMITER = ',' # Used to separate 'start,15999999' 
+TERMINATOR = '\r' # How pi_logger recognizes a complete line # TODO: test on glider!!!
+DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime' 
 
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
 #####################################################################
@@ -55,13 +60,13 @@ start_command_received = False
 # ==============================================================================
 # --- Worker functions ---
 # ==============================================================================
-def handle_start_param(param: str):
-    """
-    Called when the 'start' command is received.
-    :param param: The parameter string passed after the delimiter (e.g., '15999999')
-    """
-    print(f"sch: Handling parameters: {param}")
-    # TODO: Implement parameter logic here
+# def handle_start_param(param: str):
+#     """
+#     Called when the 'start' command is received.
+#     :param param: The parameter string passed after the delimiter (e.g., '15999999')
+#     """
+#     print(f"sch: Handling parameters: {param}")
+#     # TODO: Implement parameter logic here
 
 
 def prep_download():
@@ -77,12 +82,12 @@ def prep_download():
     # TODO: Implement download preparation logic here
 
 
-def shutdown_pi():
-    """
-    Called after prep_download() completes.
-    """
-    print("sch: Executing shutdown_pi()...")
-    # TODO: Implement system shutdown logic here (e.g., os.system("sudo shutdown -h now"))
+# def shutdown_pi():
+#     """
+#     Called after prep_download() completes.
+#     """
+#     print("sch: Executing shutdown_pi()...")
+#     # TODO: Implement system shutdown logic here (e.g., os.system("sudo shutdown -h now"))
 
 
 # ==============================================================================
@@ -141,25 +146,37 @@ def run_serial_handler():
         # Read available bytes from serial
         if ser.in_waiting > 0:
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
-            buffer += data
+            buffer += data # Buffer is necessary so if more data is received nothing is whiped out
 
-            print(f"sch: received data = [{data}], buffer =[{buffer}]\n")
+            print(f"sch: received data = [{data}], \n buffer =[{buffer}]\n")
 
-            # Check if complete message with terminator arrived
-            # TODO: ensure the line terminator is correct here
-            while TERMINATOR in buffer:
-                line, buffer = buffer.split(TERMINATOR, 1)
-                line = line.strip()
+            # Handle START ('start') scenario
+            if 'start' in buffer:
+                print(f"sch: start case: buffer is {buffer}")
 
-                if not line:
-                    continue
+                # TODO: handle start
+
+                # Reset the buffer
+                buffer = ''
+
+            elif 'download' in buffer:
+                print(f"sch: download case: buffer is {buffer}")
+
+                #TODO: handle download 
+
+                # Reset the buffer
+                buffer = ''
+
+            else:
+                continue
+            
 
                 print(f"sch: Received line = [{line}]")
 
-                # Split payload by configured delimiter
-                parts = line.split(DELIMITER, 1)
-                cmd = parts[0].strip().lower()
-                arg = parts[1].strip() if len(parts) > 1 else ""
+            #     # Split payload by configured delimiter
+            #     parts = line.split(DELIMITER, 1)
+            #     cmd = parts[0].strip().lower()
+            #     arg = parts[1].strip() if len(parts) > 1 else ""
 
                 # --------------------------------------------------------------
                 # Command 1: START
