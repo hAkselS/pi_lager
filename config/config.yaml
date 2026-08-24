@@ -1,8 +1,7 @@
-# Pi Lager Config
 WISPR3_DATA_DIR: /media/camera/WISPR
 SSD_DIR: /home/camera
-SERIAL_PORT: '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
+SERIAL_PORT: /dev/ttyUSB0
 BAUD_RATE: 9600
-TERMINATOR: '\r\n'
-DELIMITER: ',' # Used to separate various parameters in the start command 
-DIVE_CLIMB: 'a'
+TERMINATOR: \r\n
+DELIMITER: ','
+DIVE_CLIMB: a

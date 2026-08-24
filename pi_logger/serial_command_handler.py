@@ -89,15 +89,16 @@ def set_dive_climb(dive_letter):
     print(f"sch: set_dive_climb has been called with letter -> [{dive_letter}]")
     # Check for valid dive letter
     if dive_letter not in ("a","b",):
-        raise ValueError("Dive letter must be 'a' or 'b'")
+        print("ERROR: sch: Dive letter must be 'a' or 'b'")
+        return 
 
     # Open config then write dive letter
-    with CONFIG_PATH.open("r") as config_file:
+    with open(CONFIG_PATH, "r") as config_file:
         config = yaml.safe_load(config_file) or {}
 
     config["DIVE_CLIMB"] = dive_letter
 
-    with CONFIG_PATH.open("w") as config_file:
+    with open(CONFIG_PATH, "w") as config_file:
         yaml.safe_dump(config, config_file, sort_keys=False)
 
     print(f"sch: set_dive_climb: updated DIVE_CLIMB to [{dive_letter}]")
@@ -105,6 +106,7 @@ def set_dive_climb(dive_letter):
 
 def start_main_dot_py():
     print(f"sch: start_mission has been called")
+    # TODO: Start main 
 
 
 # def prep_download():
@@ -192,7 +194,7 @@ def run_serial_handler():
             # -- Handle START ('start') scenario --
             # ===========================================
             if 'start' in buffer:
-                print(f"sch: start case: raw command string (buffer) ->[{buffer}]")
+                print(f"sch: start case: raw command string (buffer) -> [{buffer}]")
                 parsed_start_cmd = buffer.strip().split(",")
                 print(f"sch: start case: parsed_start_cmd -> [{parsed_start_cmd}]")
                 pi_start, pi_dive, pi_params, pi_date = parsed_start_cmd
