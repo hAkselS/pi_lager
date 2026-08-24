@@ -16,7 +16,7 @@ I/O:    This program listens on a serial port (default: /dev/ttyXXX) for command
             1. start 
                 - Receives: 'start,a,12345678,2026-08-19T20:59:20Z'
                             '\r'
-                - (Yes, a new line then a \return)
+                - (Yes, a new line then a \r (return))
                 - Launches main.py and analyzes directive stored in param. 
                 - Params must be a number between 0 and 15,999,999 (TODO: needs testing)
             2. download 
@@ -34,6 +34,7 @@ import os
 import signal
 import serial
 from datetime import datetime, timezone
+import yaml
 
 #####################################################################
 # CONFIGURATION DEFAULTS
@@ -43,6 +44,7 @@ BAUD_RATE = 9600
 TERMINATOR = '\r' # How pi_logger recognizes a complete line # TODO: test on glider!!!
 DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime' 
 
+CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
 #####################################################################
 
@@ -80,11 +82,26 @@ def set_pi_datetime(date_string):
 def set_mission_params(param_string):
     print(f"sch: set_mission_params has been called with string -> [{param_string}]")
     # Implement later
+    print("sch: set mission params passing, not implemented yet")
     pass
 
 def set_dive_climb(dive_letter):
     print(f"sch: set_dive_climb has been called with letter -> [{dive_letter}]")
-    # TODO: save dive climb status to
+    # Check for valid dive letter
+    if dive_letter not in ("a","b",):
+        raise ValueError("Dive letter must be 'a' or 'b'")
+
+    # Open config then write dive letter
+    with CONFIG_PATH.open("r") as config_file:
+        config = yaml.safe_load(config_file) or {}
+
+    config["DIVE_CLIMB"] = dive_letter
+
+    with CONFIG_PATH.open("w") as config_file:
+        yaml.safe_dump(config, config_file, sort_keys=False)
+
+    print(f"sch: set_dive_climb: updated DIVE_CLIMB to [{dive_letter}]")
+
 
 def start_main_dot_py():
     print(f"sch: start_mission has been called")
@@ -171,8 +188,11 @@ def run_serial_handler():
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
             buffer += data # Buffer is necessary so nothing is lost if a second packet comes in
 
-            # Handle START ('start') scenario
+            # ===========================================
+            # -- Handle START ('start') scenario --
+            # ===========================================
             if 'start' in buffer:
+                print(f"sch: start case: raw command string (buffer) ->[{buffer}]")
                 parsed_start_cmd = buffer.strip().split(",")
                 print(f"sch: start case: parsed_start_cmd -> [{parsed_start_cmd}]")
                 pi_start, pi_dive, pi_params, pi_date = parsed_start_cmd
