@@ -22,7 +22,7 @@ I/O:    This program listens on a serial port (default: /dev/ttyXXX) for command
             2. download 
                 - Prepares data for download and sends a packet to Seaglider. 
 
-ID: sch
+ID:     sch
 
 Usage:  <python3 pi_logger/serial_command_handler.py>
 '''

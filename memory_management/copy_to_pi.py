@@ -1,4 +1,6 @@
 '''
+File:   copy_memory_to_pi.py
+
 Spec:   This script is used to copy WISPR data (stored as .dat files) 
         from the WISPR3 to an SSD storage device interfaced to the Raspberry Pi.
         This script assumes that the Pi is connected to an M.2 memory hat
@@ -12,6 +14,7 @@ I/O:    This script reads from pi_lager/config.yaml file to find
 
 Usage:  <python3 memory_management/copy_to_pi.py>
 
+ID:     ctp
 '''
 
 import subprocess 
@@ -23,7 +26,7 @@ from pathlib import Path
 config_path="config/config.yaml"
 #####################################################################
 
-print("I am running") 
+print("ctp: I am running") 
 
 def get_default_paths_from_config(config_path=config_path):
     with open(config_path, 'r') as f:
@@ -58,7 +61,7 @@ def soft_search_WISPR(where_to_look):
     if not parent_dir.is_dir():
         raise FileNotFoundError(f"Parent directory {parent_dir} not found.")
     
-    print(f"Looking in {parent_dir} for WISPR3 MicroSD card named something like {target_dir}...")
+    print(f"ctp: Looking in {parent_dir} for WISPR3 MicroSD card named something like {target_dir}...")
 
     # 4. List the directories in the parent directory.
     for item in parent_dir.iterdir():
@@ -69,7 +72,7 @@ def soft_search_WISPR(where_to_look):
             if "WISPR" in current_dir_upper or target_dir_upper in current_dir_upper:
                 # 6. Return the path without the trailing slash.
                 discovered_path = str(item) # Path lib natively comits the trailing slash when cast to a string. 
-                print(f"soft_search_WISPR found: {discovered_path}")
+                print(f"ctp: soft_search_WISPR found: {discovered_path}")
     
                 return discovered_path # :D 
             
@@ -92,7 +95,7 @@ def soft_search_SSD(where_to_look):
     if not parent_dir.is_dir():
         raise FileNotFoundError(f"Parent directory {parent_dir} not found.")
     
-    print(f"Looking in {parent_dir} for SSD card named something like {target_dir}...")
+    print(f"ctp: Looking in {parent_dir} for SSD card named something like {target_dir}...")
 
     # 4. List the directories in the parent directory.
     for item in parent_dir.iterdir():
@@ -104,7 +107,7 @@ def soft_search_SSD(where_to_look):
             if "SSD" in current_dir_upper or target_dir_upper in current_dir_upper:
                 # 6. Return the path without the trailing slash.
                 discovered_path = str(item) # Path lib natively comits the trailing slash when cast to a string. 
-                print(f"soft_search_SSD found: {discovered_path}")
+                print(f"ctp: soft_search_SSD found: {discovered_path}")
     
                 return discovered_path # :D 
             
@@ -127,15 +130,15 @@ def copy_to_pi():
     # Get the default paths from the config file.
     path_to_wispr3_data, path_to_ssd = get_default_paths_from_config()
     # Debug 
-    print(f"Path to WISPR3 data: {path_to_wispr3_data}")
-    print(f"Path to SSD: {path_to_ssd}")
+    print(f"ctp: Path to WISPR3 data: {path_to_wispr3_data}")
+    print(f"ctp: Path to SSD: {path_to_ssd}")
 
     # Check that the paths are valid and make modifications if necessary.
     path_to_wispr3_data = soft_search_WISPR(path_to_wispr3_data) 
     path_to_ssd = soft_search_SSD(path_to_ssd)
     # Debug
-    print(f"Adjusted path to WISPR3 data: {path_to_wispr3_data}")
-    print(f"Adjusted path to SSD: {path_to_ssd}")
+    print(f"ctp: Adjusted path to WISPR3 data: {path_to_wispr3_data}")
+    print(f"ctp: Adjusted path to SSD: {path_to_ssd}")
 
     # Construct the rsync command                       # Store everything inside "WISPR_data" on the SSD. 
     # rsync_command = f"rsync -ahv --update {path_to_wispr3_data} {path_to_ssd}/WISPR_data/" # Careful with the trailing slashes here.
@@ -151,13 +154,12 @@ def copy_to_pi():
     try:
         # Run RSYNC. 
         subprocess.run(rsync_command, check=True) 
-        print(f"\nSuccessfully copied WISPR data from {path_to_wispr3_data} to {path_to_ssd}/WISPR_data/")
+        print(f"\nctp: Successfully copied WISPR data from {path_to_wispr3_data} to {path_to_ssd}/WISPR_data/")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"\nError copying WISPR data: {e}")
+        print(f"\nERROR: ctp: copying WISPR data: {e}")
         return False
 
 # Main function for testing    
-if __name__ == '__main__':
-    print("I am in main") 
+if __name__ == '__main__': 
     copy_to_pi()
