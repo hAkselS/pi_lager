@@ -79,7 +79,7 @@ def set_pi_datetime(date_string):
 def set_mission_params(param_string):
     print(f"sch: set_mission_params has been called with string -> [{param_string}]")
     # Implement later
-    print("sch: set mission params passing, not implemented yet")
+    print("ERROR: sch: set mission params passing, not implemented yet")
     pass
 
 def set_dive_climb(dive_letter):
@@ -103,10 +103,8 @@ def set_dive_climb(dive_letter):
 
 def start_main_dot_py():
     global main_process
-    print(f"sch: start_mission has been called")
+    print(f"sch: start_mission has been called\n")
     main_process= subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
-
-    # TODO: Start main 
 
 
 # def prep_download():
@@ -122,8 +120,6 @@ def start_main_dot_py():
 #     # TODO: Implement download preparation logic here
 
 
-
-
 # ==============================================================================
 # --- Process Control Helpers ---
 # ==============================================================================
@@ -131,6 +127,7 @@ def is_main_running():
     """Helper function to cleanly check if main.py is currently active."""
     global main_process
     return main_process is not None and main_process.poll() is None
+
 # TODO: uncomment when ready
 # def stop_main_process():
 #     """
@@ -182,17 +179,17 @@ def run_serial_handler():
     while True:
         # Maintain state for main.py
         if is_main_running():
-            print("sch: main is running!")
+            # print("sch: main is running!")
+            pass
         elif main_process is not None:
             # main_process exists, but poll() returned an exit code (just finished)
             exit_code = main_process.poll()
-            print(f"sch: main finished on its own with exit code {exit_code}")
+            print(f"\nsch: main finished with exit code {exit_code}")
             main_process = None  # Clear process reference
-            main_finished = True # Process complete
+            main_finished = True # Process complete (remembers that main has finished till process termination)
         else:
-            print("sch: main is not running")
-
-        time.sleep(1)
+            # print("sch: main is not running")
+            pass
 
         # Read available bytes from serial
         if ser.in_waiting > 0:
@@ -212,7 +209,7 @@ def run_serial_handler():
 
                 print(f"sch: start case: raw command string (buffer) -> {buffer}")
                 parsed_start_cmd = buffer.split(",")
-                print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}")
+                print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}\n")
                 
                 pi_start, pi_dive, pi_params, pi_date = [item.strip() for item in parsed_start_cmd]
 

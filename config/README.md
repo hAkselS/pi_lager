@@ -6,7 +6,7 @@ WISPR3_DATA_DIR: /media/camera/WISPR
 SSD_DIR: /home/camera
 
 ### Serial port information used by the pi_logger/serial_command_handler.py
-#### THESE FUNCTIONS CONFIGURATIONS DO NOT WORK YET!!!!
+#### THESE FUNCTIONS CONFIGURATIONS DO NOT WORK YET (but wil be added later)!!!!
 SERIAL_PORT: '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE: 9600
 TERMINATOR: '\r\n'
