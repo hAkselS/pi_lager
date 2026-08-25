@@ -25,7 +25,7 @@ config_path="config/config.yaml"
 
 print("I am running") 
 
-def get_default_paths_from_config(config_path):
+def get_default_paths_from_config(config_path=config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
         print(f'type = {type(config)}')
