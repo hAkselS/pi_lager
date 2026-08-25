@@ -51,12 +51,9 @@ MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this scrip
 
 #####################################################################
 # GLOBAL STATE FLAGS & STATUS VARIABLES
-download_received_early = False
-download_called_prematurely = False
-
-# Process management state
 main_process = None
-start_command_received = False
+main_finished = False 
+
 #####################################################################
 
 
@@ -105,7 +102,10 @@ def set_dive_climb(dive_letter):
 
 
 def start_main_dot_py():
+    global main_process
     print(f"sch: start_mission has been called")
+    main_process= subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+
     # TODO: Start main 
 
 
@@ -127,6 +127,10 @@ def start_main_dot_py():
 # ==============================================================================
 # --- Process Control Helpers ---
 # ==============================================================================
+def is_main_running():
+    """Helper function to cleanly check if main.py is currently active."""
+    global main_process
+    return main_process is not None and main_process.poll() is None
 # TODO: uncomment when ready
 # def stop_main_process():
 #     """
@@ -163,8 +167,7 @@ def start_main_dot_py():
 # --- Main Serial Listener Loop ---
 # ==============================================================================
 def run_serial_handler():
-    global start_command_received, main_process
-    global download_received_early, download_called_prematurely
+    global main_process, main_finished
 
     print(f"sch: Starting serial listener on {SERIAL_PORT} @ {BAUD_RATE} baud...\n")
 
@@ -177,41 +180,60 @@ def run_serial_handler():
     buffer = ""
 
     while True:
-        # Check if main.py exited on its own (for status awareness)
-        # TODO: reinstate this when ready
-        # if main_process is not None and main_process.poll() is not None:
-        #     # Process finished naturally
-        #     # TODO: alter flags for more aksel style design 
-        #     # TODO: when main finishes, run packetize results
-        #     pass
+        # Maintain state for main.py
+        if is_main_running():
+            print("sch: main is running!")
+        elif main_process is not None:
+            # main_process exists, but poll() returned an exit code (just finished)
+            exit_code = main_process.poll()
+            print(f"sch: main finished on its own with exit code {exit_code}")
+            main_process = None  # Clear process reference
+            main_finished = True # Process complete
+        else:
+            print("sch: main is not running")
+
+        time.sleep(1)
 
         # Read available bytes from serial
         if ser.in_waiting > 0:
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
-            buffer += data # Buffer is necessary so nothing is lost if a second packet comes in
+            buffer += data
+            buffer = buffer.strip()
 
             # ===========================================
             # -- Handle START ('start') scenario --
             # ===========================================
             if 'start' in buffer:
-                print(f"sch: start case: raw command string (buffer) -> [{buffer}]")
-                parsed_start_cmd = buffer.strip().split(",")
-                print(f"sch: start case: parsed_start_cmd -> [{parsed_start_cmd}]")
-                pi_start, pi_dive, pi_params, pi_date = parsed_start_cmd
+                # Guard against spawning a second instance
+                if is_main_running():
+                    print("ERROR: sch: start called while main is already running")
+                    buffer = ''
+                    continue
 
-                # Set date time 
+                print(f"sch: start case: raw command string (buffer) -> {buffer}")
+                parsed_start_cmd = buffer.split(",")
+                print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}")
+                
+                pi_start, pi_dive, pi_params, pi_date = [item.strip() for item in parsed_start_cmd]
+
                 set_pi_datetime(pi_date)
-
-                # Set param values (does nothing right now)
                 set_mission_params(pi_params)
-
-                # Store dive/climb status
                 set_dive_climb(pi_dive)
 
-                # Start main.py
                 start_main_dot_py()
+                buffer = ''
 
-                # Reset the buffer
+            # Handle DOWNLOAD ('download') scenario
+            elif 'download' in buffer:
+                parsed_download_cmd = buffer.strip()
+                print(f"sch: download case: parsed_download_cmd -> {parsed_download_cmd}")
+
+                # If download arrives while main is active, stop main before packetizing
+                if is_main_running():
+                    print("sch: Download command received while main is running. Stopping main...")
+                    # stop_main_process()
+
+                # prep_download()
                 buffer = ''
 
             # Handle DOWNLOAD ('download') scenario
