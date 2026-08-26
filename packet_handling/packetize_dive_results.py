@@ -11,5 +11,6 @@ Usage:  <python3 packet_handling/packetize_drive_results.py>
 
 ID:     pdr
 '''
+# TODO: Read from the config what level of logging should be reported
 
 print("pdr: I have been called (that's all for now folks)")

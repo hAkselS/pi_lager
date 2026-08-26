@@ -46,6 +46,8 @@ DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime'
 
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
+PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py'
+# DOWNLOAD_SCRIPT_PATH = ''
 #####################################################################
 
 
@@ -54,6 +56,9 @@ MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this scrip
 main_process = None
 main_finished = False 
 
+packetize_process = None
+download_packet_created = False
+# download_finished = False
 #####################################################################
 
 
@@ -104,7 +109,15 @@ def set_dive_climb(dive_letter):
 def start_main_dot_py():
     global main_process
     print(f"sch: start_mission has been called\n")
-    main_process= subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+    main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+
+
+def call_packetize_results():
+    ''' Create a packet to send to the glider'''
+    global download_process
+    print(f"sch: call packetize_results has been called")
+    download_process = subprocess.Popen(["python3", PACKETIZE_SCRIPT_PATH])
+
 
 
 # def prep_download():
@@ -210,9 +223,18 @@ def run_serial_handler():
                 print(f"sch: start case: raw command string (buffer) -> {buffer}")
                 parsed_start_cmd = buffer.split(",")
                 print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}\n")
-                
+                # Check incoming start command 
+                if (len(parsed_start_cmd) != 4 or not parsed_start_cmd[1].isalpha() 
+                    or len(parsed_start_cmd[1]) != 1 
+                    or not parsed_start_cmd[2].isdigit() 
+                    or not parsed_start_cmd[3].replace('Z', '').replace('-', '').replace(':', '').replace('T', '').isalnum()): 
+                    print("ERROR: sch: invalid start buffer command... Continuing\n")
+                    buffer = '' # Clear buffer and hope for a good fresh command
+                    continue
+
                 pi_start, pi_dive, pi_params, pi_date = [item.strip() for item in parsed_start_cmd]
 
+                
                 set_pi_datetime(pi_date)
                 set_mission_params(pi_params)
                 set_dive_climb(pi_dive)
@@ -228,19 +250,12 @@ def run_serial_handler():
                 # If download arrives while main is active, stop main before packetizing
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
+                    print("ERROR: sch: main stopping function is not finished!")
                     # stop_main_process()
+                # Packetize the results, then send them overserial
+                else:
+                    call_packetize_results()
 
-                # prep_download()
-                buffer = ''
-
-            # Handle DOWNLOAD ('download') scenario
-            elif 'download' in buffer:
-                parsed_download_cmd = buffer.strip()
-                print(f"sch: download case: parsed_download_cmd -> [{parsed_download_cmd}]")
-
-                #TODO: handle download 
-
-                # Reset the buffer
                 buffer = ''
 
             else:
