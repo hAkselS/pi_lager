@@ -20,21 +20,24 @@ ID:     ctp
 import subprocess 
 import yaml
 from pathlib import Path
+import sys 
 
-#####################################################################
-# CONFIGURATION DEFAULTS
-config_path="config/config.yaml"
-#####################################################################
+# ==============================================================================
+# --- Configuration Defaults ---
+CONFIG_PATH="config/config.yaml"
+# ==============================================================================
 
-print("ctp: I am running") 
-
-def get_default_paths_from_config(config_path=config_path):
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-        print(f'type = {type(config)}')
-        path_to_wispr3_data = config.get('WISPR3_DATA_DIR')
-        path_to_ssd = config.get('SSD_DIR')
-    return path_to_wispr3_data, path_to_ssd
+def get_default_paths_from_config(config_path=CONFIG_PATH):
+    try:
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            print(f'type = {type(config)}')
+            path_to_wispr3_data = config.get('WISPR3_DATA_DIR')
+            path_to_ssd = config.get('SSD_DIR')
+        return path_to_wispr3_data, path_to_ssd
+    
+    except (FileNotFoundError, yaml.YAMLError, KeyError) as e:
+        sys.exit(f"ctp: failed to open config.yaml - {e}")
 
 def soft_search_WISPR(where_to_look):
     '''

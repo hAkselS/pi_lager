@@ -36,8 +36,8 @@ import serial
 from datetime import datetime, timezone
 import yaml
 
-#####################################################################
-# CONFIGURATION DEFAULTS
+# ==============================================================================
+# --- Configuration Defaults ---
 # TODO: MOVE THESE TO CONFIG.YAML
 SERIAL_PORT = '/dev/ttys001'  # Probably /dev/ttyAMA0 or similar on Pi
 BAUD_RATE = 9600
@@ -48,10 +48,10 @@ CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
 PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
 # DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
-#####################################################################
+# ==============================================================================
 
 
-#####################################################################
+# ==============================================================================
 # GLOBAL STATE FLAGS & STATUS VARIABLES
 main_process = None
 main_finished = False 
@@ -59,7 +59,7 @@ main_finished = False
 packetize_process = None
 download_packet_created = False
 # download_finished = False
-#####################################################################
+# ==============================================================================
 
 
 # ==============================================================================
