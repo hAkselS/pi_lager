@@ -22,7 +22,7 @@ I/O:    This program listens on a serial port (default: /dev/ttyXXX) for command
             2. download 
                 - Prepares data for download and sends a packet to Seaglider. 
 
-ID: sch
+ID:     sch
 
 Usage:  <python3 pi_logger/serial_command_handler.py>
 '''
@@ -46,6 +46,8 @@ DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime'
 
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
+PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
+# DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
 #####################################################################
 
 
@@ -54,6 +56,9 @@ MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this scrip
 main_process = None
 main_finished = False 
 
+packetize_process = None
+download_packet_created = False
+# download_finished = False
 #####################################################################
 
 
@@ -104,7 +109,15 @@ def set_dive_climb(dive_letter):
 def start_main_dot_py():
     global main_process
     print(f"sch: start_mission has been called\n")
-    main_process= subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+    main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+
+
+def call_packetize_results():
+    ''' Create a packet to send to the glider'''
+    global download_process
+    print(f"sch: call packetize_results has been called")
+    download_process = subprocess.Popen(["python3", PACKETIZE_SCRIPT_PATH])
+
 
 
 # def prep_download():
@@ -128,28 +141,28 @@ def is_main_running():
     global main_process
     return main_process is not None and main_process.poll() is None
 
-# TODO: uncomment when ready
-# def stop_main_process():
-#     """
-#     Politely attempts to shut down main.py using SIGTERM for 10 seconds.
-#     If main.py does not terminate in time, forcefully kills it with SIGKILL.
-#     """
-#     global main_process
-#     if main_process is None or main_process.poll() is not None:
-#         return  # Process is not running
+def stop_main_process():
+    """
+    Politely attempts to shut down pi_logger/main.py using SIGTERM for 10 seconds.
+    If main.py does not terminate in time, forcefully kills it with SIGKILL.
+    """
+    global main_process
+    if main_process is None or main_process.poll() is not None:
+        print("sch: stop_main_process exiting b/c main is not running.")
+        return  # Process is not running
 
-#     print("sch: Politely requesting main.py to stop (SIGTERM)...")
-#     main_process.terminate()
+    print("sch: Politely requesting main.py to stop (SIGTERM)...")
+    main_process.terminate()
 
-#     try:
-#         # Wait up to 10 seconds for graceful exit
-#         main_process.wait(timeout=10)
-#         print("sch: main.py stopped cleanly.")
-#     except subprocess.TimeoutExpired:
-#         print("sch: main.py timed out after 10s. Forcefully terminating (SIGKILL)...")
-#         main_process.kill()
-#         main_process.wait()  # Ensure process resources are cleaned up
-#         print("sch: main.py forcefully terminated.")
+    try:
+        # Wait up to 5 seconds for graceful exit
+        main_process.wait(timeout=5)
+        print("sch: main.py stopped cleanly.")
+    except subprocess.TimeoutExpired:
+        print("sch: main.py timed out after 5s. Forcefully terminating (SIGKILL)...")
+        main_process.kill()
+        main_process.wait()  # Ensure process resources are cleaned up
+        print("sch: main.py forcefully terminated.")
 
 # def shutdown_pi():
 #     """
@@ -210,9 +223,19 @@ def run_serial_handler():
                 print(f"sch: start case: raw command string (buffer) -> {buffer}")
                 parsed_start_cmd = buffer.split(",")
                 print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}\n")
-                
+                # Check incoming start command 
+                if (len(parsed_start_cmd) != 4 
+                    or not parsed_start_cmd[1].isalpha() 
+                    or len(parsed_start_cmd[1]) != 1 
+                    or not parsed_start_cmd[2].isdigit() 
+                    or not parsed_start_cmd[3].replace('Z', '').replace('-', '').replace(':', '').replace('T', '').isalnum()): 
+                    print("ERROR: sch: invalid start buffer command... Continuing\n")
+                    buffer = '' # Clear buffer and hope for a good fresh command
+                    continue
+
                 pi_start, pi_dive, pi_params, pi_date = [item.strip() for item in parsed_start_cmd]
 
+                
                 set_pi_datetime(pi_date)
                 set_mission_params(pi_params)
                 set_dive_climb(pi_dive)
@@ -220,7 +243,9 @@ def run_serial_handler():
                 start_main_dot_py()
                 buffer = ''
 
-            # Handle DOWNLOAD ('download') scenario
+            # ===========================================
+            # -- Handle DOWNLOAD ('download') scenario --
+            # ===========================================
             elif 'download' in buffer:
                 parsed_download_cmd = buffer.strip()
                 print(f"sch: download case: parsed_download_cmd -> {parsed_download_cmd}")
@@ -228,19 +253,13 @@ def run_serial_handler():
                 # If download arrives while main is active, stop main before packetizing
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
-                    # stop_main_process()
+                    stop_main_process()
+                    
+                # Packetize the results, then send them overserial
+                else:
+                    call_packetize_results()
+                    # TODO: call send download
 
-                # prep_download()
-                buffer = ''
-
-            # Handle DOWNLOAD ('download') scenario
-            elif 'download' in buffer:
-                parsed_download_cmd = buffer.strip()
-                print(f"sch: download case: parsed_download_cmd -> [{parsed_download_cmd}]")
-
-                #TODO: handle download 
-
-                # Reset the buffer
                 buffer = ''
 
             else:
