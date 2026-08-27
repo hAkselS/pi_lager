@@ -46,8 +46,8 @@ DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime'
 
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
-PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py'
-# DOWNLOAD_SCRIPT_PATH = ''
+PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
+# DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
 #####################################################################
 
 
@@ -141,10 +141,9 @@ def is_main_running():
     global main_process
     return main_process is not None and main_process.poll() is None
 
-# TODO: uncomment when ready
 def stop_main_process():
     """
-    Politely attempts to shut down main.py using SIGTERM for 10 seconds.
+    Politely attempts to shut down pi_logger/main.py using SIGTERM for 10 seconds.
     If main.py does not terminate in time, forcefully kills it with SIGKILL.
     """
     global main_process
@@ -156,7 +155,7 @@ def stop_main_process():
     main_process.terminate()
 
     try:
-        # Wait up to 10 seconds for graceful exit
+        # Wait up to 5 seconds for graceful exit
         main_process.wait(timeout=5)
         print("sch: main.py stopped cleanly.")
     except subprocess.TimeoutExpired:
@@ -225,7 +224,8 @@ def run_serial_handler():
                 parsed_start_cmd = buffer.split(",")
                 print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}\n")
                 # Check incoming start command 
-                if (len(parsed_start_cmd) != 4 or not parsed_start_cmd[1].isalpha() 
+                if (len(parsed_start_cmd) != 4 
+                    or not parsed_start_cmd[1].isalpha() 
                     or len(parsed_start_cmd[1]) != 1 
                     or not parsed_start_cmd[2].isdigit() 
                     or not parsed_start_cmd[3].replace('Z', '').replace('-', '').replace(':', '').replace('T', '').isalnum()): 
@@ -243,7 +243,9 @@ def run_serial_handler():
                 start_main_dot_py()
                 buffer = ''
 
-            # Handle DOWNLOAD ('download') scenario
+            # ===========================================
+            # -- Handle DOWNLOAD ('download') scenario --
+            # ===========================================
             elif 'download' in buffer:
                 parsed_download_cmd = buffer.strip()
                 print(f"sch: download case: parsed_download_cmd -> {parsed_download_cmd}")
@@ -251,8 +253,8 @@ def run_serial_handler():
                 # If download arrives while main is active, stop main before packetizing
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
-                    # print("ERROR: sch: main stopping function is not finished!")
                     stop_main_process()
+                    
                 # Packetize the results, then send them overserial
                 else:
                     call_packetize_results()
