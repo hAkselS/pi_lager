@@ -256,6 +256,7 @@ def run_serial_handler():
                 # Packetize the results, then send them overserial
                 else:
                     call_packetize_results()
+                    # TODO: call send download
 
                 buffer = ''
 
