@@ -6,6 +6,7 @@ Spec:   This script is the primary orchestrator of the processes that make up pi
         Main.py then launches copy_memory_to_pi.py to move fresh data from the WISPR to the Pi.
         Once copy_memory_to_pi.py is complete, main.py will launch the FKW_detector. When the detector is finished,
         main.py will send a success message to serial_command_handler.py and exit. 
+        Note: No main because this should always run in order. 
 
 I/O:    This script reads the config.yaml.
         This scrip accepts an interupt signal from serial_command_handler.py. 
@@ -23,7 +24,7 @@ import time
 
 def handle_shutdown_signal(signum, frame):
     print("\n[main.py] Received polite stop request. Cleaning up...")
-    # Do cleanup here (save files, close serial connections, etc.)
+    # TODO: Write to log or yaml saying "I was forced to shutdown"
     sys.exit(0)
 
 # Register the signal handler for polite termination
@@ -31,7 +32,7 @@ signal.signal(signal.SIGTERM, handle_shutdown_signal)
 
 print("[main.py] Script started...")
 try:
-    for i in range(10):
+    for i in range(30):
         print(f"[main.py] Working... step {i}")
         time.sleep(1)
 except Exception as e:

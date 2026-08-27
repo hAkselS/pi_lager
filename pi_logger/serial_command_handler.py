@@ -142,27 +142,28 @@ def is_main_running():
     return main_process is not None and main_process.poll() is None
 
 # TODO: uncomment when ready
-# def stop_main_process():
-#     """
-#     Politely attempts to shut down main.py using SIGTERM for 10 seconds.
-#     If main.py does not terminate in time, forcefully kills it with SIGKILL.
-#     """
-#     global main_process
-#     if main_process is None or main_process.poll() is not None:
-#         return  # Process is not running
+def stop_main_process():
+    """
+    Politely attempts to shut down main.py using SIGTERM for 10 seconds.
+    If main.py does not terminate in time, forcefully kills it with SIGKILL.
+    """
+    global main_process
+    if main_process is None or main_process.poll() is not None:
+        print("sch: stop_main_process exiting b/c main is not running.")
+        return  # Process is not running
 
-#     print("sch: Politely requesting main.py to stop (SIGTERM)...")
-#     main_process.terminate()
+    print("sch: Politely requesting main.py to stop (SIGTERM)...")
+    main_process.terminate()
 
-#     try:
-#         # Wait up to 10 seconds for graceful exit
-#         main_process.wait(timeout=10)
-#         print("sch: main.py stopped cleanly.")
-#     except subprocess.TimeoutExpired:
-#         print("sch: main.py timed out after 10s. Forcefully terminating (SIGKILL)...")
-#         main_process.kill()
-#         main_process.wait()  # Ensure process resources are cleaned up
-#         print("sch: main.py forcefully terminated.")
+    try:
+        # Wait up to 10 seconds for graceful exit
+        main_process.wait(timeout=5)
+        print("sch: main.py stopped cleanly.")
+    except subprocess.TimeoutExpired:
+        print("sch: main.py timed out after 5s. Forcefully terminating (SIGKILL)...")
+        main_process.kill()
+        main_process.wait()  # Ensure process resources are cleaned up
+        print("sch: main.py forcefully terminated.")
 
 # def shutdown_pi():
 #     """
@@ -250,8 +251,8 @@ def run_serial_handler():
                 # If download arrives while main is active, stop main before packetizing
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
-                    print("ERROR: sch: main stopping function is not finished!")
-                    # stop_main_process()
+                    # print("ERROR: sch: main stopping function is not finished!")
+                    stop_main_process()
                 # Packetize the results, then send them overserial
                 else:
                     call_packetize_results()
