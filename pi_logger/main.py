@@ -77,6 +77,7 @@ try:
     # TODO: add conditional statement to skip this based on yaml
     try:
         print("mdp: starting copy_to_pi")
+        print("ERROR: mdp: copy_to_pi commented out")
         # copy_to_pi.copy_to_pi()
     except Exception as e:
         sys.exit(f"mdp: copy_to_pi execution failed - {e}")
@@ -87,7 +88,8 @@ try:
 
         # start_new_session=True attaches all child sub-processes to a single Process Group ID
         print("mdp: starting FKW_detector")
-        fkw_process = subprocess.Popen(["bash", expanded_fkw_path], start_new_session=True)
+        print("ERROR: mdp: subprocess commented out")
+        # fkw_process = subprocess.Popen(["bash", expanded_fkw_path], start_new_session=True)
         
         # Wait for the detector shell script to finish execution
         return_code = fkw_process.wait()

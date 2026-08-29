@@ -38,16 +38,27 @@ import yaml
 
 # ==============================================================================
 # --- Configuration Defaults ---
-# TODO: MOVE THESE TO CONFIG.YAML
-SERIAL_PORT = '/dev/ttys001'  # Probably /dev/ttyAMA0 or similar on Pi
-BAUD_RATE = 9600
-TERMINATOR = '\r' # How pi_logger recognizes a complete line # TODO: test on glider!!!
-DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime' 
-
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
 PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
 # DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
+
+# ------------------------------------------------------------------------------
+# --- YAML Configuration Defaults ---
+try:
+    with open(CONFIG_PATH, "r") as config_file:
+        config = yaml.safe_load(config_file) or {}
+except (FileNotFoundError, PermissionError):
+    print("ERROR: sch: YAML failed to open for initial configs")
+    config = {}  # File couldn't be opened, fall back to empty dict
+
+# Now the .get() defaults WILL save you:
+SERIAL_PORT = config.get("SERIAL_PORT", '/dev/ttys001')
+BAUD_RATE = config.get("BAUD_RATE", 9600)
+TERMINATOR = config.get("TERMINATOR", "\r")
+DELIMITER = config.get("DELIMITER", ",")
+PROMPT = config.get("PROMPT", "P>")
+
 # ==============================================================================
 
 
@@ -72,8 +83,19 @@ def set_pi_datetime(date_string):
     # Format as 'YYYY-MM-DD HH:MM:SS' in UTC
     formatted_time = dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-    # Use a subprocess to set the datetim
+    # Save date into config.yaml (for now) 
+    # TODO: think of a better place to store this
+    with open(CONFIG_PATH, "r") as config_file:
+        config = yaml.safe_load(config_file) or {}
+    
+        config["DATE_TIME"] = formatted_time
+    
+        with open(CONFIG_PATH, "w") as config_file:
+            yaml.safe_dump(config, config_file, sort_keys=False)
+
+    # Use a subprocess to set the datetime
     # TODO: TEST ME ON THE RASPBERRY PI
+    print("ERROR: sch: sudo date -u -s formatted time IS COMMENTED OUT")
     # subprocess.run(["sudo", "date", "-u", "-s", formatted_time], check=True)
     
     new_time = datetime.now(timezone.utc)
@@ -120,25 +142,14 @@ def send_fkw_results_and_prompt():
 
 
 # def call_packetize_results():
-#     ''' Create a packet to send to the glider'''
-#     global download_process
-#     print(f"sch: call packetize_results has been called")
-#     # TODO: DO NOT USE SUBPROCESS HERE, CALL AN IMPORTED FUNCTION INSTEAD 
-#     download_process = subprocess.Popen(["python3", PACKETIZE_SCRIPT_PATH])
-
-
-
-# def prep_download():
 #     """
 #     Called before or when the 'download' command is received.
 #     Gathers all information to be transfered to the glider to radio transmission to shore
 #     into once text file and finishes.
 #     """
-#     global download_received_early, download_called_prematurely
-#     print("sch: Executing prep_download()...")
-#     print(f"  └─ Flag (download_received_early): {download_received_early}")
-#     print(f"  └─ Flag (download_called_prematurely): {download_called_prematurely}")
-#     # TODO: Implement download preparation logic here
+#     global download_process
+#     print(f"sch: call packetize_results has been called")
+#     # TODO: DO NOT USE SUBPROCESS HERE, CALL AN IMPORTED FUNCTION INSTEAD 
 
 
 # ==============================================================================
@@ -267,6 +278,7 @@ def run_serial_handler():
                 else:
                     # call_packetize_results()
                     # TODO: call send download
+                    pass
 
                 buffer = ''
 
