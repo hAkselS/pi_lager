@@ -35,6 +35,7 @@ import signal
 import serial
 from datetime import datetime, timezone
 import yaml
+import glob
 
 # ==============================================================================
 # --- Configuration Defaults ---
@@ -42,6 +43,7 @@ CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
 PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
 # DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
+FKW_RESULTS_PATH = os.path.expanduser('~/FKW_detector/data_products/packets')
 
 # ------------------------------------------------------------------------------
 # --- YAML Configuration Defaults ---
@@ -133,11 +135,47 @@ def start_main_dot_py():
     print(f"sch: start_mission has been called\n")
     main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
 
-def send_fkw_results_and_prompt():
-    # TODO: rebuild something more robust
+def send_fkw_results_and_prompt(ser):
+    # TODO: rebuild this function into something more robust
     ''' A temporary function designed to send the latest FKW_detector results
     over serial to the seaglider when the 'download' command comes in. '''
+
     print(f"sch: send_fkw_results_and_prompt has been called")
+
+    # Match all .csv files in the target directory
+    search_pattern = os.path.join(FKW_RESULTS_PATH, '*.csv')
+    csv_files = glob.glob(search_pattern)
+    
+    if not csv_files:
+        print(f"ERROR: sch: No CSV files found in {FKW_RESULTS_PATH}")
+        no_packets_message = f"Uh oh, there are not any packets in {FKW_RESULTS_PATH}, so you get this message instead\n"
+        ser.write(no_packets_message.encode('utf-8'))
+        ser.write(PROMPT.encode('utf-8'))
+        return
+
+    # Find the most recently modified CSV file
+    latest_file = max(csv_files, key=os.path.getmtime)
+    print(f"sch: Sending contents of latest log: {latest_file}")
+
+    # Read and send file contents
+    try:
+        with open(latest_file, 'r') as f:
+            file_contents = f.read()
+                
+        #print(f"file contents: {file_contents}")
+        # Send CSV data
+        ser.write(file_contents.encode('utf-8'))
+        
+        # Ensure a terminator sequence precedes the prompt if the file doesn't end with a newline
+        if not file_contents.endswith('\n') and not file_contents.endswith('\r'):
+            ser.write(TERMINATOR.encode('utf-8'))
+
+        # Send the PROMPT string
+        ser.write(PROMPT.encode('utf-8'))
+        print("FKW results and prompt successfully sent over serial.")
+        
+    except Exception as e:
+        print(f"ERROR: sch: Error reading or transmitting file: {e}")
 
 
 
@@ -273,12 +311,14 @@ def run_serial_handler():
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
                     stop_main_process()
+
+                    # TODO: test this logic (send fkw results after stop main)
+                    send_fkw_results_and_prompt(ser)
                     
                 # Packetize the results, then send them overserial
                 else:
                     # call_packetize_results()
-                    # TODO: call send download
-                    pass
+                    send_fkw_results_and_prompt(ser)
 
                 buffer = ''
 
