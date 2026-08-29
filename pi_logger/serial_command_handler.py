@@ -111,12 +111,20 @@ def start_main_dot_py():
     print(f"sch: start_mission has been called\n")
     main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
 
+def send_fkw_results_and_prompt():
+    # TODO: rebuild something more robust
+    ''' A temporary function designed to send the latest FKW_detector results
+    over serial to the seaglider when the 'download' command comes in. '''
+    print(f"sch: send_fkw_results_and_prompt has been called")
 
-def call_packetize_results():
-    ''' Create a packet to send to the glider'''
-    global download_process
-    print(f"sch: call packetize_results has been called")
-    download_process = subprocess.Popen(["python3", PACKETIZE_SCRIPT_PATH])
+
+
+# def call_packetize_results():
+#     ''' Create a packet to send to the glider'''
+#     global download_process
+#     print(f"sch: call packetize_results has been called")
+#     # TODO: DO NOT USE SUBPROCESS HERE, CALL AN IMPORTED FUNCTION INSTEAD 
+#     download_process = subprocess.Popen(["python3", PACKETIZE_SCRIPT_PATH])
 
 
 
@@ -257,7 +265,7 @@ def run_serial_handler():
                     
                 # Packetize the results, then send them overserial
                 else:
-                    call_packetize_results()
+                    # call_packetize_results()
                     # TODO: call send download
 
                 buffer = ''
