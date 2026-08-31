@@ -156,7 +156,7 @@ def copy_to_pi():
     try:
         # Run RSYNC. 
         subprocess.run(rsync_command, check=True) 
-        print(f"\nctp: Successfully copied WISPR data from {path_to_wispr3_data} to {path_to_ssd}/WISPR_data/")
+        print(f"\nctp: Successfully copied WISPR data from {path_to_wispr3_data} to {path_to_ssd}/WISPR_data/\n")
         return True
     except subprocess.CalledProcessError as e:
         print(f"\nERROR: ctp: copying WISPR data: {e}")

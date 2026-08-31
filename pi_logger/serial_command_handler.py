@@ -133,7 +133,8 @@ def set_dive_climb(dive_letter):
 def start_main_dot_py():
     global main_process
     print(f"sch: start_mission has been called\n")
-    main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+    # preexec_fn=os.setsid puts main.py in its own process group so kill signals hit child threads too
+    main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH], preexec_fn=os.setsid)
 
 def send_fkw_results_and_prompt(ser):
     # TODO: rebuild this function into something more robust
@@ -151,6 +152,7 @@ def send_fkw_results_and_prompt(ser):
         no_packets_message = f"Uh oh, there are not any packets in {FKW_RESULTS_PATH}, so you get this message instead\n"
         ser.write(no_packets_message.encode('utf-8'))
         ser.write(PROMPT.encode('utf-8'))
+        ser.flush()  # Ensure data leaves the buffer immediately
         return
 
     # Find the most recently modified CSV file
@@ -168,10 +170,12 @@ def send_fkw_results_and_prompt(ser):
         
         # Ensure a terminator sequence precedes the prompt if the file doesn't end with a newline
         if not file_contents.endswith('\n') and not file_contents.endswith('\r'):
-            ser.write(TERMINATOR.encode('utf-8'))
+            ser.write(b'\n')
 
         # Send the PROMPT string
         ser.write(PROMPT.encode('utf-8'))
+        ser.flush()
+
         print(f"sch: FKW results and prompt successfully sent over serial.")
         
     except Exception as e:
@@ -254,7 +258,7 @@ def run_serial_handler():
         elif main_process is not None:
             # main_process exists, but poll() returned an exit code (just finished)
             exit_code = main_process.poll()
-            print(f"\nsch: main finished with exit code {exit_code} (0=success)")
+            print(f"\nsch: main finished with exit code {exit_code} (0=success)\n")
             main_process = None  # Clear process reference
             main_finished = True # Process complete (remembers that main has finished till process termination)
         else:
@@ -312,13 +316,12 @@ def run_serial_handler():
                     print("sch: Download command received while main is running. Stopping main...")
                     stop_main_process()
 
-                    # TODO: test this logic (send fkw results after stop main)
-                    send_fkw_results_and_prompt(ser)
-                    
-                # Packetize the results, then send them overserial
-                else:
-                    # call_packetize_results()
-                    send_fkw_results_and_prompt(ser)
+                    # Flush any stale serial input/output buffers before transmitting results
+                    ser.reset_input_buffer()
+                    ser.reset_output_buffer()
+                    time.sleep(0.1)
+
+                send_fkw_results_and_prompt(ser)
 
                 buffer = ''
 
