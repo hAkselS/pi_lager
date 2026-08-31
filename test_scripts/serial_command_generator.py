@@ -10,8 +10,7 @@ Usage:  python3 test_scripts/serial_command_generator.py
 
 import os
 import pty
-import serial
-import time
+import select
 
 def main():
     # 1. Create a pseudo-terminal pair (built-in Python module)
@@ -27,13 +26,21 @@ def main():
     try:
         while True:
             cmd = input("Send command > ")
-            if cmd.strip().lower() == "exit":
+            if cmd.strip() == "exit": # Aksel removed '.lower()' 
                 break
 
             # Write data to the master end; your listener reads from slave_port_name
             payload = (cmd + "\n").encode("utf-8")
             os.write(master, payload)
             print(f" -> Sent: {repr(payload)}")
+
+
+            # Read reply
+            rlist, _, _ = select.select([master], [], [], .05)
+            if master in rlist: 
+                response = os.read(master, 4096)
+                print(f"\n<- Received the following response:")
+                print(f"{repr(response.decode('utf-8', errors='ignore'))}")
 
     except KeyboardInterrupt:
         print("\nClosing port.")

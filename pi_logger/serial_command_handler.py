@@ -108,7 +108,7 @@ def set_pi_datetime(date_string):
 def set_mission_params(param_string):
     print(f"sch: set_mission_params has been called with string -> [{param_string}]")
     # Implement later
-    print("ERROR: sch: set mission params passing, not implemented yet")
+    print("WARNING: sch: set mission params passing, not implemented yet")
     pass
 
 def set_dive_climb(dive_letter):
@@ -172,7 +172,7 @@ def send_fkw_results_and_prompt(ser):
 
         # Send the PROMPT string
         ser.write(PROMPT.encode('utf-8'))
-        print("FKW results and prompt successfully sent over serial.")
+        print(f"sch: FKW results and prompt successfully sent over serial.")
         
     except Exception as e:
         print(f"ERROR: sch: Error reading or transmitting file: {e}")
@@ -254,7 +254,7 @@ def run_serial_handler():
         elif main_process is not None:
             # main_process exists, but poll() returned an exit code (just finished)
             exit_code = main_process.poll()
-            print(f"\nsch: main finished with exit code {exit_code}")
+            print(f"\nsch: main finished with exit code {exit_code} (0=success)")
             main_process = None  # Clear process reference
             main_finished = True # Process complete (remembers that main has finished till process termination)
         else:

@@ -31,7 +31,6 @@ def get_default_paths_from_config(config_path=CONFIG_PATH):
     try:
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
-            print(f'type = {type(config)}')
             path_to_wispr3_data = config.get('WISPR3_DATA_DIR')
             path_to_ssd = config.get('SSD_DIR')
         return path_to_wispr3_data, path_to_ssd
@@ -53,7 +52,7 @@ def soft_search_WISPR(where_to_look):
         <path/to/WISPR3_MicroSD> (NO TRAILING SLASH)
     '''
     # 1. Convert the input into a Path object.
-    orignal_full_path = Path(where_to_look).resolve() 
+    orignal_full_path = Path(where_to_look).expanduser().resolve() 
 
     #2. Strip the path into the parent_dir and target_dir.
     parent_dir = orignal_full_path.parent
@@ -87,7 +86,7 @@ def soft_search_SSD(where_to_look):
     This function looks for an SSD directory instead of a WISPR3 directory.
     '''
     # 1. Convert the input into a Path object.
-    orignal_full_path = Path(where_to_look).resolve() 
+    orignal_full_path = Path(where_to_look).expanduser().resolve() 
 
     #2. Strip the path into the parent_dir and target_dir.
     parent_dir = orignal_full_path.parent

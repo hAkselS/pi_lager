@@ -35,6 +35,7 @@ PATH_TO_FKW_RUN_DETECTOR_SCRIPT = "~/FKW_detector/sys_control/run_detector.sh" #
 
 # Global handle for tracking the active subprocess
 fkw_process = None
+# ==============================================================================
 
 # ==============================================================================
 # --- Process Group Cleanup & Signal Handlers ---
@@ -77,8 +78,8 @@ try:
     # TODO: add conditional statement to skip this based on yaml
     try:
         print("mdp: starting copy_to_pi")
-        print("ERROR: mdp: copy_to_pi commented out")
-        # copy_to_pi.copy_to_pi()
+        # print("ERROR: mdp: copy_to_pi commented out")
+        copy_to_pi.copy_to_pi()
     except Exception as e:
         sys.exit(f"mdp: copy_to_pi execution failed - {e}")
 
@@ -88,8 +89,8 @@ try:
 
         # start_new_session=True attaches all child sub-processes to a single Process Group ID
         print("mdp: starting FKW_detector")
-        print("ERROR: mdp: subprocess commented out")
-        # fkw_process = subprocess.Popen(["bash", expanded_fkw_path], start_new_session=True)
+        # print("ERROR: mdp: subprocess commented out")
+        fkw_process = subprocess.Popen(["bash", expanded_fkw_path], start_new_session=True)
         
         # Wait for the detector shell script to finish execution
         return_code = fkw_process.wait()
@@ -97,7 +98,7 @@ try:
         if return_code != 0:
             print(f"mdp: FKW_detector exited with error code {return_code}")
         else:
-            print("mdp: FKW_detector completed successfully.")
+            print("\nmdp: FKW_detector completed successfully.")
 
     except FileNotFoundError:
         print(f"mdp: script not found at {expanded_fkw_path}")
