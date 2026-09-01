@@ -331,6 +331,7 @@ def run_serial_handler():
                     send_fkw_results_and_prompt(ser)
 
                 buffer = ''
+                # TODO: shutdown pi
 
             else:
                 continue

@@ -77,7 +77,7 @@ try:
     # --- Start copy_to_pi.py ---
     # TODO: add conditional statement to skip this based on yaml
     try:
-        print("mdp: starting copy_to_pi")
+        print("mdp: starting copy_to_pi...\n")
         # print("ERROR: mdp: copy_to_pi commented out")
         copy_to_pi.copy_to_pi()
     except Exception as e:
@@ -88,7 +88,7 @@ try:
         expanded_fkw_path = os.path.expanduser(PATH_TO_FKW_RUN_DETECTOR_SCRIPT)
 
         # start_new_session=True attaches all child sub-processes to a single Process Group ID
-        print("mdp: starting FKW_detector")
+        print("mdp: starting FKW_detector... \n")
         # print("ERROR: mdp: subprocess commented out")
         fkw_process = subprocess.Popen(["bash", expanded_fkw_path], start_new_session=True)
         
