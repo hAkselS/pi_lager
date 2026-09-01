@@ -1,4 +1,4 @@
-WISPR3_DATA_DIR: /Users/aksel.sloan/FKW_detector/2024_descent
+WISPR3_DATA_DIR: ~/FKW_detector/2024_descent
 SSD_DIR: ~/FKW_detector/2024_descent_copy
 DIVE_CLIMB: a
 DATE_TIME: '2026-08-19 20:59:20'
