@@ -143,6 +143,12 @@ def send_fkw_results_and_prompt(ser):
 
     print(f"sch: send_fkw_results_and_prompt has been called")
 
+    # If main is running, tack on an extra message
+    if is_main_running():
+        main_is_running_message = "MAIN WAS RUNNING WHILE 'download' WAS CALLED!!!"
+        ser.write(main_is_running_message.encode('utf-8'))
+        
+
     # Match all .csv files in the target directory
     search_pattern = os.path.join(FKW_RESULTS_PATH, '*.csv')
     csv_files = glob.glob(search_pattern)
@@ -311,17 +317,18 @@ def run_serial_handler():
                 parsed_download_cmd = buffer.strip()
                 print(f"sch: download case: parsed_download_cmd -> {parsed_download_cmd}")
 
-                # If download arrives while main is active, stop main before packetizing
+                # If download arrives while main is active, send what you have and shutdown
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
+                    send_fkw_results_and_prompt(ser)
                     stop_main_process()
 
                     # Flush any stale serial input/output buffers before transmitting results
                     ser.reset_input_buffer()
                     ser.reset_output_buffer()
                     time.sleep(0.1)
-
-                send_fkw_results_and_prompt(ser)
+                else: 
+                    send_fkw_results_and_prompt(ser)
 
                 buffer = ''
 
