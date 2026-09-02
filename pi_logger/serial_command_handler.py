@@ -41,7 +41,7 @@ import glob
 # --- Configuration Defaults ---
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
-PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
+# PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
 # DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
 FKW_RESULTS_PATH = os.path.expanduser('~/FKW_detector/data_products/packets')
 
@@ -54,7 +54,7 @@ except (FileNotFoundError, PermissionError):
     print("ERROR: sch: YAML failed to open for initial configs")
     config = {}  # File couldn't be opened, fall back to empty dict
 
-# Now the .get() defaults WILL save you:
+# .get() keeps the system running even if theres trouble in yaml town
 SERIAL_PORT = config.get("SERIAL_PORT", '/dev/ttys001')
 BAUD_RATE = config.get("BAUD_RATE", 9600)
 TERMINATOR = config.get("TERMINATOR", "\r")
