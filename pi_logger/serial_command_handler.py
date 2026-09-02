@@ -35,23 +35,36 @@ import signal
 import serial
 from datetime import datetime, timezone
 import yaml
+import glob
 
-#####################################################################
-# CONFIGURATION DEFAULTS
-# TODO: MOVE THESE TO CONFIG.YAML
-SERIAL_PORT = '/dev/ttys001'  # Probably /dev/ttyAMA0 or similar on Pi
-BAUD_RATE = 9600
-TERMINATOR = '\r' # How pi_logger recognizes a complete line # TODO: test on glider!!!
-DELIMITER = ',' # Used to separate 'start,dive/climb,param,datetime' 
-
+# ==============================================================================
+# --- Configuration Defaults ---
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
-PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
+# PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
 # DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
-#####################################################################
+FKW_RESULTS_PATH = os.path.expanduser('~/FKW_detector/data_products/packets')
+
+# ------------------------------------------------------------------------------
+# --- YAML Configuration Defaults ---
+try:
+    with open(CONFIG_PATH, "r") as config_file:
+        config = yaml.safe_load(config_file) or {}
+except (FileNotFoundError, PermissionError):
+    print("ERROR: sch: YAML failed to open for initial configs")
+    config = {}  # File couldn't be opened, fall back to empty dict
+
+# .get() keeps the system running even if theres trouble in yaml town
+SERIAL_PORT = config.get("SERIAL_PORT", '/dev/ttys001')
+BAUD_RATE = config.get("BAUD_RATE", 9600)
+TERMINATOR = config.get("TERMINATOR", "\r")
+DELIMITER = config.get("DELIMITER", ",")
+PROMPT = config.get("PROMPT", "P>")
+
+# ==============================================================================
 
 
-#####################################################################
+# ==============================================================================
 # GLOBAL STATE FLAGS & STATUS VARIABLES
 main_process = None
 main_finished = False 
@@ -59,7 +72,7 @@ main_finished = False
 packetize_process = None
 download_packet_created = False
 # download_finished = False
-#####################################################################
+# ==============================================================================
 
 
 # ==============================================================================
@@ -72,8 +85,19 @@ def set_pi_datetime(date_string):
     # Format as 'YYYY-MM-DD HH:MM:SS' in UTC
     formatted_time = dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
-    # Use a subprocess to set the datetim
+    # Save date into config.yaml (for now) 
+    # TODO: think of a better place to store this
+    with open(CONFIG_PATH, "r") as config_file:
+        config = yaml.safe_load(config_file) or {}
+    
+        config["DATE_TIME"] = formatted_time
+    
+        with open(CONFIG_PATH, "w") as config_file:
+            yaml.safe_dump(config, config_file, sort_keys=False)
+
+    # Use a subprocess to set the datetime
     # TODO: TEST ME ON THE RASPBERRY PI
+    print("ERROR: sch: sudo date -u -s formatted time IS COMMENTED OUT")
     # subprocess.run(["sudo", "date", "-u", "-s", formatted_time], check=True)
     
     new_time = datetime.now(timezone.utc)
@@ -84,7 +108,7 @@ def set_pi_datetime(date_string):
 def set_mission_params(param_string):
     print(f"sch: set_mission_params has been called with string -> [{param_string}]")
     # Implement later
-    print("ERROR: sch: set mission params passing, not implemented yet")
+    print("WARNING: sch: set mission params passing, not implemented yet")
     pass
 
 def set_dive_climb(dive_letter):
@@ -109,28 +133,71 @@ def set_dive_climb(dive_letter):
 def start_main_dot_py():
     global main_process
     print(f"sch: start_mission has been called\n")
-    main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH])
+    # preexec_fn=os.setsid puts main.py in its own process group so kill signals hit child threads too
+    main_process = subprocess.Popen(["python3", MAIN_SCRIPT_PATH], preexec_fn=os.setsid)
+
+def send_fkw_results_and_prompt(ser):
+    # TODO: rebuild this function into something more robust
+    ''' A temporary function designed to send the latest FKW_detector results
+    over serial to the seaglider when the 'download' command comes in. '''
+
+    print(f"sch: send_fkw_results_and_prompt has been called")
+
+    # If main is running, tack on an extra message
+    if is_main_running():
+        main_is_running_message = "MAIN WAS RUNNING WHILE 'download' WAS CALLED!!!"
+        ser.write(main_is_running_message.encode('utf-8'))
+        
+
+    # Match all .csv files in the target directory
+    search_pattern = os.path.join(FKW_RESULTS_PATH, '*.csv')
+    csv_files = glob.glob(search_pattern)
+    
+    if not csv_files:
+        print(f"ERROR: sch: No CSV files found in {FKW_RESULTS_PATH}")
+        no_packets_message = f"Uh oh, there are not any packets in {FKW_RESULTS_PATH}, so you get this message instead\n"
+        ser.write(no_packets_message.encode('utf-8'))
+        ser.write(PROMPT.encode('utf-8'))
+        ser.flush()  # Ensure data leaves the buffer immediately
+        return
+
+    # Find the most recently modified CSV file
+    latest_file = max(csv_files, key=os.path.getmtime)
+    print(f"sch: Sending contents of latest log: {latest_file}")
+
+    # Read and send file contents
+    try:
+        with open(latest_file, 'r') as f:
+            file_contents = f.read()
+                
+        #print(f"file contents: {file_contents}")
+        # Send CSV data
+        ser.write(file_contents.encode('utf-8'))
+        
+        # Ensure a terminator sequence precedes the prompt if the file doesn't end with a newline
+        if not file_contents.endswith('\n') and not file_contents.endswith('\r'):
+            ser.write(b'\n')
+
+        # Send the PROMPT string
+        ser.write(PROMPT.encode('utf-8'))
+        ser.flush()
+
+        print(f"sch: FKW results and prompt successfully sent over serial.")
+        
+    except Exception as e:
+        print(f"ERROR: sch: Error reading or transmitting file: {e}")
 
 
-def call_packetize_results():
-    ''' Create a packet to send to the glider'''
-    global download_process
-    print(f"sch: call packetize_results has been called")
-    download_process = subprocess.Popen(["python3", PACKETIZE_SCRIPT_PATH])
 
-
-
-# def prep_download():
+# def call_packetize_results():
 #     """
 #     Called before or when the 'download' command is received.
 #     Gathers all information to be transfered to the glider to radio transmission to shore
 #     into once text file and finishes.
 #     """
-#     global download_received_early, download_called_prematurely
-#     print("sch: Executing prep_download()...")
-#     print(f"  └─ Flag (download_received_early): {download_received_early}")
-#     print(f"  └─ Flag (download_called_prematurely): {download_called_prematurely}")
-#     # TODO: Implement download preparation logic here
+#     global download_process
+#     print(f"sch: call packetize_results has been called")
+#     # TODO: DO NOT USE SUBPROCESS HERE, CALL AN IMPORTED FUNCTION INSTEAD 
 
 
 # ==============================================================================
@@ -197,7 +264,7 @@ def run_serial_handler():
         elif main_process is not None:
             # main_process exists, but poll() returned an exit code (just finished)
             exit_code = main_process.poll()
-            print(f"\nsch: main finished with exit code {exit_code}")
+            print(f"\nsch: main finished with exit code {exit_code} (0=success)\n")
             main_process = None  # Clear process reference
             main_finished = True # Process complete (remembers that main has finished till process termination)
         else:
@@ -250,17 +317,21 @@ def run_serial_handler():
                 parsed_download_cmd = buffer.strip()
                 print(f"sch: download case: parsed_download_cmd -> {parsed_download_cmd}")
 
-                # If download arrives while main is active, stop main before packetizing
+                # If download arrives while main is active, send what you have and shutdown
                 if is_main_running():
                     print("sch: Download command received while main is running. Stopping main...")
+                    send_fkw_results_and_prompt(ser)
                     stop_main_process()
-                    
-                # Packetize the results, then send them overserial
-                else:
-                    call_packetize_results()
-                    # TODO: call send download
+
+                    # Flush any stale serial input/output buffers before transmitting results
+                    ser.reset_input_buffer()
+                    ser.reset_output_buffer()
+                    time.sleep(0.1)
+                else: 
+                    send_fkw_results_and_prompt(ser)
 
                 buffer = ''
+                # TODO: shutdown pi
 
             else:
                 continue
