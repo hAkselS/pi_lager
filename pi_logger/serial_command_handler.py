@@ -275,6 +275,7 @@ def run_serial_handler():
         if ser.in_waiting > 0:
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
             buffer += data
+            print(f"sch: raw command string (buffer) -> {buffer}")
             buffer = buffer.strip()
 
             # ===========================================
@@ -287,7 +288,6 @@ def run_serial_handler():
                     buffer = ''
                     continue
 
-                print(f"sch: start case: raw command string (buffer) -> {buffer}")
                 parsed_start_cmd = buffer.split(",")
                 print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}\n")
                 # Check incoming start command 
