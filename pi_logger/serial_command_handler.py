@@ -259,82 +259,82 @@ def run_serial_handler():
     while True:
         # Maintain state for main.py
         if is_main_running():
-            # print("sch: main is running!")
             pass
         elif main_process is not None:
-            # main_process exists, but poll() returned an exit code (just finished)
             exit_code = main_process.poll()
             print(f"\nsch: main finished with exit code {exit_code} (0=success)\n")
-            main_process = None  # Clear process reference
-            main_finished = True # Process complete (remembers that main has finished till process termination)
-        else:
-            # print("sch: main is not running")
-            pass
+            main_process = None
+            main_finished = True
 
-        # Read available bytes from serial
+        # 1. Read available incoming bytes and append to the buffer
         if ser.in_waiting > 0:
             data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
             buffer += data
-            print(f"sch: raw command string (buffer) -> {buffer}")
-            buffer = buffer.strip()
 
-            # ===========================================
-            # -- Handle START ('start') scenario --
-            # ===========================================
-            if 'start' in buffer:
-                # Guard against spawning a second instance
-                if is_main_running():
-                    print("ERROR: sch: start called while main is already running")
-                    buffer = ''
-                    continue
+        # 2. Check if a complete line/command has arrived (looking for \n or \r)
+        if '\n' in buffer or '\r' in buffer:
+            # Split the buffer into complete lines and remaining incomplete chunk
+            # Handles both \r\n, \n, or \r delimiters cleanly
+            lines = buffer.replace('\r', '\n').split('\n')
+            
+            # The last element is whatever incomplete fragment remains after the final delimiter
+            buffer = lines.pop()
 
-                parsed_start_cmd = buffer.split(",")
-                print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}\n")
-                # Check incoming start command 
-                if (len(parsed_start_cmd) != 4 
-                    or not parsed_start_cmd[1].isalpha() 
-                    or len(parsed_start_cmd[1]) != 1 
-                    or not parsed_start_cmd[2].isdigit() 
-                    or not parsed_start_cmd[3].replace('Z', '').replace('-', '').replace(':', '').replace('T', '').isalnum()): 
-                    print("ERROR: sch: invalid start buffer command... Continuing\n")
-                    buffer = '' # Clear buffer and hope for a good fresh command
-                    continue
+            # Process every fully received line
+            for line in lines:
+                cmd = line.strip()
+                if not cmd:
+                    continue  # Ignore empty lines
 
-                pi_start, pi_dive, pi_params, pi_date = [item.strip() for item in parsed_start_cmd]
+                print(f"sch: Processing complete command -> [{cmd}]")
 
-                
-                set_pi_datetime(pi_date)
-                set_mission_params(pi_params)
-                set_dive_climb(pi_dive)
+                # ===========================================
+                # -- Handle START ('start') scenario --
+                # ===========================================
+                if cmd.startswith('start'):
+                    if is_main_running():
+                        print("ERROR: sch: start called while main is already running")
+                        continue
 
-                start_main_dot_py()
-                buffer = ''
+                    parsed_start_cmd = [item.strip() for item in cmd.split(",")]
+                    print(f"sch: start case: parsed_start_cmd -> {parsed_start_cmd}")
 
-            # ===========================================
-            # -- Handle DOWNLOAD ('download') scenario --
-            # ===========================================
-            elif 'download' in buffer:
-                parsed_download_cmd = buffer.strip()
-                print(f"sch: download case: parsed_download_cmd -> {parsed_download_cmd}")
+                    if (len(parsed_start_cmd) != 4 
+                        or not parsed_start_cmd[1].isalpha() 
+                        or len(parsed_start_cmd[1]) != 1 
+                        or not parsed_start_cmd[2].isdigit() 
+                        or not parsed_start_cmd[3].replace('Z', '').replace('-', '').replace(':', '').replace('T', '').isalnum()): 
+                        
+                        print("ERROR: sch: invalid start command format... Ignoring.\n")
+                        continue
 
-                # If download arrives while main is active, send what you have and shutdown
-                if is_main_running():
-                    print("sch: Download command received while main is running. Stopping main...")
-                    send_fkw_results_and_prompt(ser)
-                    stop_main_process()
+                    pi_start, pi_dive, pi_params, pi_date = parsed_start_cmd
 
-                    # Flush any stale serial input/output buffers before transmitting results
-                    ser.reset_input_buffer()
-                    ser.reset_output_buffer()
-                    time.sleep(0.1)
-                else: 
-                    send_fkw_results_and_prompt(ser)
+                    set_pi_datetime(pi_date)
+                    set_mission_params(pi_params)
+                    set_dive_climb(pi_dive)
 
-                buffer = ''
-                # TODO: shutdown pi
+                    start_main_dot_py()
 
-            else:
-                continue
+                # ===========================================
+                # -- Handle DOWNLOAD ('download') scenario --
+                # ===========================================
+                elif 'download' in cmd:
+                    print(f"sch: download case received -> [{cmd}]")
+
+                    if is_main_running():
+                        print("sch: Download command received while main is running. Stopping main...")
+                        send_fkw_results_and_prompt(ser)
+                        stop_main_process()
+
+                        ser.reset_input_buffer()
+                        ser.reset_output_buffer()
+                        time.sleep(0.1)
+                    else: 
+                        send_fkw_results_and_prompt(ser)
+
+        # Small sleep to prevent aggressive CPU spinning when idle
+        time.sleep(0.05)
 
 
 if __name__ == '__main__':
