@@ -8,4 +8,4 @@
 ~~~~~~~~~~`""'
 ```
 
-This directory contains all files related to packetizing information for transmission to the SeaGlider. 
+This directory contains all files related to packetizing information for transmission to the SeaGlider. This feature has NOT been implemented yet. 
