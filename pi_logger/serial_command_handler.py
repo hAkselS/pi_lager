@@ -41,8 +41,8 @@ import glob
 # --- Configuration Defaults ---
 CONFIG_PATH = 'config/config.yaml'
 MAIN_SCRIPT_PATH = 'pi_logger/main.py'  # Path to main.py relative to this script
-# PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py' # TODO: call this as a function, don't use sub process popen
-# DOWNLOAD_SCRIPT_PATH = '' # TODO: call this as a function, don't use sub process popen 
+# PACKETIZE_SCRIPT_PATH = 'packet_handling/packetize_dive_results.py'
+# DOWNLOAD_SCRIPT_PATH = '' 
 FKW_RESULTS_PATH = os.path.expanduser('~/FKW_detector/data_products/packets')
 
 # ------------------------------------------------------------------------------
@@ -97,8 +97,12 @@ def set_pi_datetime(date_string):
 
     # Use a subprocess to set the datetime
     # TODO: TEST ME ON THE RASPBERRY PI
-    print("ERROR: sch: sudo date -u -s formatted time IS COMMENTED OUT")
-    # subprocess.run(["sudo", "date", "-u", "-s", formatted_time], check=True)
+    if os.getenv("BENCHTEST") != "1":
+        # Run this if BENCHTEST is NOT set
+        subprocess.run(["sudo", "date", "-u", "-s", formatted_time], check=True)
+    else:
+            print("WARNING: sch: RPi time set skipped due to BENCHTEST mode.")
+
     
     new_time = datetime.now(timezone.utc)
     print(f"\nsch: set_pi_datetime has been called with string -> [{date_string}]\n" \
@@ -197,7 +201,7 @@ def send_fkw_results_and_prompt(ser):
 #     """
 #     global download_process
 #     print(f"sch: call packetize_results has been called")
-#     # TODO: DO NOT USE SUBPROCESS HERE, CALL AN IMPORTED FUNCTION INSTEAD 
+#     # DO NOT USE SUBPROCESS HERE, CALL AN IMPORTED FUNCTION INSTEAD 
 
 
 # ==============================================================================
