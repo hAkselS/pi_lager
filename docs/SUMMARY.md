@@ -13,5 +13,5 @@ Future development includes creating a packetizer that will create a packet cons
 
 ## What to Watch Out for:
     - Users must download FKW_detector and pi_lager into the ~/ directory on their Raspberry Pi.
-    - Users must set the directories where they expect to discover the data, transfer the data, and analyze the data in both FKW_detector/config/config.yaml and pi_lager/config/config.yaml.
+    - Users must set the directories where they expect to discover the data, transfer the data, and analyze the data in BOTH FKW_detector/config/config.yaml and pi_lager/config/config.yaml.
 
