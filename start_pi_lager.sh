@@ -1,3 +1,20 @@
-# Not Finished! 
+#!/usr/bin/env bash
 
-echo "what are you doing? This isn't done yet!" 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$SCRIPT_DIR/logs"
+
+mkdir -p "$LOG_DIR"
+
+log_number=0
+while :; do
+    log_file="$LOG_DIR/log_$(printf '%04d' "$log_number")"
+    if (set -o noclobber; : > "$log_file") 2>/dev/null; then
+        break
+    fi
+    log_number=$((log_number + 1))
+done
+
+source "$SCRIPT_DIR/venv/bin/activate"
+
+export PYTHONUNBUFFERED=1
+python -u "$SCRIPT_DIR/pi_logger/serial_command_handler.py" >> "$log_file" 2>&1
