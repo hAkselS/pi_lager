@@ -1,0 +1,10 @@
+[Unit]
+Description=This custom service starts the pi_lager at boot time.
+
+[Service]
+ExecStart=/home/camera/pi_lager/start_pi_lager.sh
+WorkingDirectory=/home/camera/pi_lager
+Restart=no
+
+[Install]
+WantedBy=default.target
