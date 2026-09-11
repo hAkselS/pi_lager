@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+if [ "$BENCHTEST" != "1" ]; then
+    sudo dtoverlay sdio
+fi
+
 SCRIPT_DIR="$HOME/pi_lager"
 LOG_DIR="$SCRIPT_DIR/logs"
 
