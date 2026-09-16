@@ -9,9 +9,9 @@ SSD_DIR: /home/camera
 
 ### Serial port information used by the pi_logger/serial_command_handler.py
 #### THESE FUNCTIONS CONFIGURATIONS DO NOT WORK YET (but wil be added later)!!!!
-SERIAL_PORT: '/dev/ttyUSB0'  # Probably /dev/ttyAMA0 or similar on Pi
+SERIAL_PORT: '/dev/ttyAMA0'  # /dev/ttyAMA0 on pi | /dev/ttys001 on mac computers
 BAUD_RATE: 9600
-TERMINATOR: '\r\n'
+TERMINATOR: '\r'
 DELIMITER: ',' # Used to separate various parameters in the start command 
 
 ### Is the glider diving or climbing? ('a':dive)('b':climb)

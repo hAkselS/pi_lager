@@ -8,4 +8,4 @@
 ~~~~~~~~~~`""'
 ``` 
 
-This directory contains all files related to copying data from WISPR3 microSD cards and reporting on data integrity. 
+Copy to pi is a simple script that acts as a wrapper for linux's rsync command. 
