@@ -161,7 +161,7 @@ def send_fkw_results_and_prompt(ser):
         print(f"ERROR: sch: No CSV files found in {FKW_RESULTS_PATH}")
         no_packets_message = f"Uh oh, there are not any packets in {FKW_RESULTS_PATH}, so you get this message instead\n"
         ser.write(no_packets_message.encode('utf-8'))
-        ser.write(PROMPT.encode('utf-8'))
+        ser.write(f"\r\n{PROMPT}".encode('utf-8'))
         ser.flush()  # Ensure data leaves the buffer immediately
         return
 
@@ -183,7 +183,7 @@ def send_fkw_results_and_prompt(ser):
             ser.write(b'\n')
 
         # Send the PROMPT string
-        ser.write(PROMPT.encode('utf-8'))
+        ser.write(f"\r\n{PROMPT}".encode('utf-8'))
         ser.flush()
 
         print(f"sch: FKW results and prompt successfully sent over serial.")
